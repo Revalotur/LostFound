@@ -6,6 +6,7 @@ include 'includes/header.php';
 $search = isset($_GET['search']) ? sanitize($_GET['search']) : '';
 $type   = isset($_GET['type']) ? sanitize($_GET['type']) : '';
 $location = isset($_GET['location']) ? sanitize($_GET['location']) : '';
+$category = isset($_GET['category']) ? sanitize($_GET['category']) : '';
 
 $sql = "SELECT r.*, u.username FROM reports r JOIN users u ON r.user_id = u.id WHERE 1=1";
 $params = [];
@@ -26,6 +27,12 @@ if ($type) {
 if ($location) {
     $sql .= " AND r.location LIKE ?";
     $params[] = "%$location%";
+    $types .= "s";
+}
+
+if ($category) {
+    $sql .= " AND r.category = ?";
+    $params[] = $category;
     $types .= "s";
 }
 
@@ -62,6 +69,19 @@ $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
                 </select>
             </div>
             <div class="filter-group">
+                <i data-lucide="layers" style="width: 18px;"></i>
+                <select name="category" class="filter-input">
+                    <option value="">Semua Kategori</option>
+                    <option value="Elektronik" <?php echo $category === 'Elektronik' ? 'selected' : ''; ?>>Elektronik</option>
+                    <option value="Dokumen/Surat" <?php echo $category === 'Dokumen/Surat' ? 'selected' : ''; ?>>Dokumen/Surat</option>
+                    <option value="Aksesoris" <?php echo $category === 'Aksesoris' ? 'selected' : ''; ?>>Aksesoris</option>
+                    <option value="Pakaian" <?php echo $category === 'Pakaian' ? 'selected' : ''; ?>>Pakaian</option>
+                    <option value="Hewan Peliharaan" <?php echo $category === 'Hewan Peliharaan' ? 'selected' : ''; ?>>Hewan Peliharaan</option>
+                    <option value="Kunci" <?php echo $category === 'Kunci' ? 'selected' : ''; ?>>Kunci</option>
+                    <option value="Lainnya" <?php echo $category === 'Lainnya' ? 'selected' : ''; ?>>Lainnya</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <i data-lucide="map-pin" style="width: 18px;"></i>
                 <input type="text" name="location" value="<?php echo $location; ?>" class="filter-input" placeholder="Lokasi...">
             </div>
@@ -80,6 +100,9 @@ $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
                     <span class="type-badge <?php echo $row['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>">
                         <?php echo $row['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
                     </span>
+                    <?php if ($row['status'] === 'resolved'): ?>
+                        <span class="type-badge" style="left: auto; right: 1rem; background: #10b981;">Selesai</span>
+                    <?php endif; ?>
                     <?php if ($row['image_url']): ?>
                         <img src="uploads/<?php echo $row['image_url']; ?>" alt="<?php echo $row['item_name']; ?>">
                     <?php else: ?>
@@ -90,7 +113,12 @@ $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
                 </div>
                 
                 <div class="card-body">
-                    <h3 class="card-title"><?php echo $row['item_name']; ?></h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <h3 class="card-title" style="margin-bottom: 0;"><?php echo $row['item_name']; ?></h3>
+                        <span style="font-size: 0.75rem; background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px; color: var(--text-light);">
+                            <?php echo $row['category'] ?? 'Lainnya'; ?>
+                        </span>
+                    </div>
                     <div class="card-info">
                         <div class="info-row">
                             <i data-lucide="map-pin"></i>

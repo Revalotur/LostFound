@@ -72,12 +72,31 @@ include '../includes/header.php';
                     <td style="padding: 1rem;"><?php echo date('d/m/y', strtotime($row['created_at'])); ?></td>
                     <td style="padding: 1rem; display: flex; gap: 0.5rem;">
                         <a href="detail.php?id=<?php echo $row['id']; ?>" class="btn" style="background: #e2e8f0; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Detail</a>
-                        <a href="delete_report.php?id=<?php echo $row['id']; ?>" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="return confirm('Hapus laporan ini?')">Hapus</a>
+                        <button type="button" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="confirmDelete(<?php echo $row['id']; ?>)">Hapus</button>
                     </td>
                 </tr>
             <?php endwhile; ?>
         </tbody>
     </table>
 </div>
+
+<script>
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Yakin ingin menghapus?',
+        text: "Laporan ini akan dihapus secara permanen dari sistem!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'delete_report.php?id=' + id;
+        }
+    })
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>

@@ -52,6 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="auth-page">
     <div class="auth-card animate-fade-in">
@@ -65,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2 style="margin-bottom: 0.5rem;">Daftar Akun Baru</h2>
         <p style="text-align: center; color: var(--text-light); margin-bottom: 1.5rem;">Bergabunglah dengan komunitas kami sekarang.</p>
         
+        <?php display_flash_message(); ?>
         <?php if ($error): ?>
             <div class="alert alert-danger" style="margin-bottom: 1.5rem;"><?php echo $error; ?></div>
         <?php endif; ?>

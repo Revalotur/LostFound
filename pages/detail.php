@@ -22,7 +22,7 @@ if (!$report) {
 }
 
 // Get Matching Reports
-$matching_reports = get_matching_reports($conn, $report['item_name'], $id);
+$matching_reports = get_matching_reports($conn, $report['item_name'], $id, $report['category']);
 
 include '../includes/header.php';
 ?>
@@ -99,7 +99,26 @@ include '../includes/header.php';
                 </div>
             </div>
             <?php endif; ?>
+            <div class="info-item">
+                <div class="info-icon">
+                    <i data-lucide="tag"></i>
+                </div>
+                <div>
+                    <label>Kategori</label>
+                    <strong><?php echo $report['category'] ?? 'Lainnya'; ?></strong>
+                </div>
+            </div>
         </div>
+
+        <?php if (!empty($report['latitude']) && !empty($report['longitude'])): ?>
+        <div style="margin-top: 2rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="map" style="width: 18px;"></i>
+                Lokasi di Peta
+            </h3>
+            <div id="map-detail" style="height: 300px; border-radius: var(--radius); border: 1px solid var(--border);"></div>
+        </div>
+        <?php endif; ?>
 
         <div class="description-box" style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
             <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
@@ -112,31 +131,50 @@ include '../includes/header.php';
         </div>
 
         <?php if (is_admin() || (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $report['user_id'])): ?>
-            <div style="margin-top: 2.5rem; display: flex; gap: 1rem;">
-                <a href="delete_report.php?id=<?php echo $report['id']; ?>" class="btn btn-danger btn-block" onclick="return confirm('Apakah Anda yakin ingin menghapus laporan ini?')">
+            <div class="detail-actions">
+                <?php if ($report['status'] === 'open'): ?>
+                    <form action="update_status.php" method="POST" id="form-resolved">
+                        <input type="hidden" name="id" value="<?php echo $report['id']; ?>">
+                        <input type="hidden" name="status" value="resolved">
+                        <button type="button" class="btn btn-success btn-block" style="background: #10b981; color: white; border: none; font-weight: 600;" onclick="confirmResolved()">
+                            <i data-lucide="check-circle" style="width: 18px;"></i>
+                            Tandai Sudah Selesai
+                        </button>
+                    </form>
+                <?php endif; ?>
+                <button type="button" class="btn btn-danger" style="flex: 1; font-weight: 600;" onclick="confirmDelete(<?php echo $report['id']; ?>)">
                     <i data-lucide="trash-2" style="width: 18px;"></i>
-                    Hapus Laporan
-                </a>
+                    Hapus
+                </button>
             </div>
         <?php endif; ?>
     </div>
 </div>
 
 <?php if (!empty($matching_reports)): ?>
-<div class="matching-section animate-fade-in" style="animation-delay: 0.3s;">
+<div class="matching-section animate-fade-in" style="animation-delay: 0.3s; margin-top: 5rem;">
     <h2 class="matching-title" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
         <i data-lucide="sparkles" style="color: var(--primary);"></i>
         Barang yang Mungkin Cocok
     </h2>
     <div class="matching-grid">
         <?php foreach ($matching_reports as $match): ?>
-            <div class="report-card" style="border: 1px solid var(--primary-light);">
-                <div class="card-body">
-                    <span class="type-badge <?php echo $match['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>" style="font-size: 0.75rem; margin-bottom: 0.5rem;">
+            <div class="report-card">
+                <div class="card-image" style="height: 150px;">
+                    <span class="type-badge <?php echo $match['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>" style="font-size: 0.7rem;">
                         <?php echo $match['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
                     </span>
-                    <h4 class="card-title" style="font-size: 1.125rem; margin-bottom: 0.5rem;"><?php echo $match['item_name']; ?></h4>
-                    <p style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.25rem;">
+                    <?php if ($match['image_url']): ?>
+                        <img src="../uploads/<?php echo $match['image_url']; ?>" alt="<?php echo $match['item_name']; ?>">
+                    <?php else: ?>
+                        <div style="width: 100%; height: 100%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                            <i data-lucide="image-off" style="width: 32px; height: 32px;"></i>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body" style="padding: 1.25rem;">
+                    <h4 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><?php echo $match['item_name']; ?></h4>
+                    <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.25rem;">
                         <i data-lucide="map-pin" style="width: 14px;"></i>
                         <?php echo $match['location']; ?>
                     </p>
@@ -151,3 +189,53 @@ include '../includes/header.php';
 <?php endif; ?>
 
 <?php include '../includes/footer.php'; ?>
+
+<?php if (!empty($report['latitude']) && !empty($report['longitude'])): ?>
+<script>
+    var map = L.map('map-detail').setView([<?php echo $report['latitude']; ?>, <?php echo $report['longitude']; ?>], 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    L.marker([<?php echo $report['latitude']; ?>, <?php echo $report['longitude']; ?>]).addTo(map)
+        .bindPopup('<?php echo addslashes($report['item_name']); ?>')
+        .openPopup();
+</script>
+<?php endif; ?>
+
+<script>
+function confirmResolved() {
+    Swal.fire({
+        title: 'Barang sudah ditemukan?',
+        text: "Status laporan akan diubah menjadi Selesai.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Sudah Selesai!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('form-resolved').submit();
+        }
+    })
+}
+
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Yakin ingin menghapus?',
+        text: "Data laporan ini akan dihapus secara permanen!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus Saja!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'delete_report.php?id=' + id;
+        }
+    })
+}
+</script>

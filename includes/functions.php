@@ -42,8 +42,19 @@ function redirect($url, $message = null, $type = 'success') {
 function display_flash_message() {
     if (isset($_SESSION['flash_message'])) {
         $msg = $_SESSION['flash_message'];
-        $class = ($msg['type'] === 'success') ? 'alert-success' : 'alert-danger';
-        echo "<div class='alert {$class}'>{$msg['text']}</div>";
+        $type = ($msg['type'] === 'success') ? 'success' : 'error';
+        $text = addslashes($msg['text']);
+        echo "<script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: '" . ($type === 'success' ? 'Berhasil!' : 'Ops!') . "',
+                    text: '{$text}',
+                    icon: '{$type}',
+                    confirmButtonColor: '#6366f1',
+                    borderRadius: '1rem'
+                });
+            });
+        </script>";
         unset($_SESSION['flash_message']);
     }
 }
@@ -51,18 +62,25 @@ function display_flash_message() {
 /**
  * Fungsi matching sederhana untuk mencari barang yang mirip
  */
-function get_matching_reports($conn, $item_name, $current_id) {
+function get_matching_reports($conn, $item_name, $current_id, $category = null) {
     $keywords = explode(' ', $item_name);
     $query_parts = [];
     foreach ($keywords as $word) {
-        if (strlen($word) > 2) { // Hanya kata yang lebih dari 2 karakter
+        if (strlen($word) > 2) {
             $query_parts[] = "item_name LIKE '%" . $conn->real_escape_string($word) . "%'";
         }
     }
 
     if (empty($query_parts)) return [];
 
-    $sql = "SELECT * FROM reports WHERE (" . implode(' OR ', $query_parts) . ") AND id != ? AND status = 'open' LIMIT 5";
+    $sql = "SELECT * FROM reports WHERE (" . implode(' OR ', $query_parts);
+    
+    if ($category) {
+        $sql .= " OR category = '" . $conn->real_escape_string($category) . "'";
+    }
+    
+    $sql .= ") AND id != ? AND status = 'open' LIMIT 5";
+    
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $current_id);
     $stmt->execute();
