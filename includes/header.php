@@ -13,44 +13,42 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lost & Found - Temukan Barang Anda</title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css?v=1.1">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <header>
         <div class="container">
             <nav>
-                <a href="<?php echo BASE_URL; ?>" class="logo">LostFound</a>
+                <a href="<?php echo BASE_URL; ?>" class="logo">
+                    <div class="logo-icon">
+                        <i data-lucide="search"></i>
+                    </div>
+                    LostFound
+                </a>
                 
-                <button class="mobile-toggle" aria-label="Toggle navigation">
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                </button>
-
                 <div class="nav-links">
-                    <a href="<?php echo BASE_URL; ?>">Beranda</a>
+                    <a href="<?php echo BASE_URL; ?>" class="nav-link">Beranda</a>
                     <?php if (is_logged_in()): ?>
-                        <div class="user-dropdown">
-                            <button class="dropdown-toggle">
-                                👤 <?php echo $_SESSION['username']; ?>
-                                <span class="arrow"></span>
-                            </button>
-                            <div class="dropdown-menu">
-                                <a href="<?php echo BASE_URL; ?>pages/profile.php">Profil Saya</a>
-                                <?php if (is_admin()): ?>
-                                    <a href="<?php echo BASE_URL; ?>pages/admin.php">Admin Panel</a>
-                                <?php endif; ?>
-                                <hr>
-                                <a href="<?php echo BASE_URL; ?>auth/logout.php" class="logout-link">Logout</a>
-                            </div>
+                        <?php if (is_admin()): ?>
+                            <a href="<?php echo BASE_URL; ?>pages/admin.php" class="nav-link">Admin Panel</a>
+                        <?php endif; ?>
+                        <div class="user-info" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text);">
+                            <i data-lucide="user" style="width: 18px;"></i>
+                            <?php echo $_SESSION['username']; ?>
                         </div>
-                        <a href="<?php echo BASE_URL; ?>pages/add_report.php" class="btn btn-primary">Buat Laporan</a>
+                        <a href="<?php echo BASE_URL; ?>auth/logout.php" class="btn btn-danger" style="padding: 0.5rem 1rem;">Keluar</a>
+                        <a href="<?php echo BASE_URL; ?>pages/add_report.php" class="btn btn-primary">
+                            <i data-lucide="plus-circle" style="width: 18px;"></i>
+                            Buat Laporan
+                        </a>
                     <?php else: ?>
-                        <a href="<?php echo BASE_URL; ?>auth/login.php">Login</a>
+                        <a href="<?php echo BASE_URL; ?>auth/login.php" class="nav-link">Masuk</a>
                         <a href="<?php echo BASE_URL; ?>auth/register.php" class="btn btn-primary">Daftar Sekarang</a>
                     <?php endif; ?>
                 </div>

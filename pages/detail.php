@@ -27,93 +27,122 @@ $matching_reports = get_matching_reports($conn, $report['item_name'], $id);
 include '../includes/header.php';
 ?>
 
-<div class="detail-container">
+<div class="detail-container animate-fade-in">
     <div class="detail-image-card">
         <?php if ($report['image_url']): ?>
-            <img src="../uploads/<?php echo $report['image_url']; ?>" alt="<?php echo $report['item_name']; ?>" style="width: 100%; border-radius: 0.5rem; display: block;">
+            <img src="../uploads/<?php echo $report['image_url']; ?>" alt="<?php echo $report['item_name']; ?>" style="width: 100%; border-radius: var(--radius); display: block; box-shadow: var(--shadow-lg);">
         <?php else: ?>
-            <div style="width: 100%; height: 400px; background: #f1f5f9; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
-                Tidak ada foto untuk laporan ini
+            <div style="width: 100%; height: 400px; background: #f1f5f9; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; border: 2px dashed var(--border);">
+                <i data-lucide="image-off" style="width: 64px; height: 64px; margin-bottom: 1rem;"></i>
+                <p>Tidak ada foto untuk laporan ini</p>
             </div>
         <?php endif; ?>
     </div>
 
     <div class="detail-info-card">
-        <span class="badge <?php echo $report['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>" style="font-size: 0.875rem; padding: 0.5rem 1rem; margin-bottom: 1.5rem;">
-            <?php echo $report['type'] === 'lost' ? 'Barang Hilang' : 'Barang Ditemukan'; ?>
-        </span>
-        <h1 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 2rem; letter-spacing: -0.025em; line-height: 1.2;"><?php echo $report['item_name']; ?></h1>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <span class="type-badge <?php echo $report['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                <?php echo $report['type'] === 'lost' ? 'Barang Hilang' : 'Barang Ditemukan'; ?>
+            </span>
+            <span style="font-size: 0.875rem; color: var(--text-light);">
+                ID Laporan: #<?php echo $report['id']; ?>
+            </span>
+        </div>
+        
+        <h1 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.025em; line-height: 1.1; color: var(--text-dark);"><?php echo $report['item_name']; ?></h1>
         
         <div class="info-grid">
             <div class="info-item">
-                <span style="font-size: 1.25rem;">📍</span>
+                <div class="info-icon">
+                    <i data-lucide="map-pin"></i>
+                </div>
                 <div>
-                    <label style="margin-bottom: 0; color: var(--text-light);">Lokasi Kejadian</label>
-                    <strong style="display: block;"><?php echo $report['location']; ?></strong>
+                    <label>Lokasi Kejadian</label>
+                    <strong><?php echo $report['location']; ?></strong>
                 </div>
             </div>
             <div class="info-item">
-                <span style="font-size: 1.25rem;">📅</span>
+                <div class="info-icon">
+                    <i data-lucide="calendar"></i>
+                </div>
                 <div>
-                    <label style="margin-bottom: 0; color: var(--text-light);">Tanggal Laporan</label>
-                    <strong style="display: block;"><?php echo date('d F Y', strtotime($report['event_date'])); ?></strong>
+                    <label>Tanggal Kejadian</label>
+                    <strong><?php echo date('d F Y', strtotime($report['event_date'])); ?></strong>
                 </div>
             </div>
             <div class="info-item">
-                <span style="font-size: 1.25rem;">👤</span>
+                <div class="info-icon">
+                    <i data-lucide="user"></i>
+                </div>
                 <div>
-                    <label style="margin-bottom: 0; color: var(--text-light);">Dilaporkan Oleh</label>
-                    <strong style="display: block;"><?php echo $report['username']; ?></strong>
+                    <label>Dilaporkan Oleh</label>
+                    <strong><?php echo $report['username']; ?></strong>
                 </div>
             </div>
             <div class="info-item">
-                <span style="font-size: 1.25rem;">📧</span>
+                <div class="info-icon">
+                    <i data-lucide="mail"></i>
+                </div>
                 <div>
-                    <label style="margin-bottom: 0; color: var(--text-light);">Email Kontak</label>
-                    <a href="mailto:<?php echo $report['email']; ?>" style="color: var(--primary); font-weight: 700; display: block;"><?php echo $report['email']; ?></a>
+                    <label>Email Kontak</label>
+                    <a href="mailto:<?php echo $report['email']; ?>"><?php echo $report['email']; ?></a>
                 </div>
             </div>
             <?php if (!empty($report['contact'])): ?>
             <div class="info-item">
-                <span style="font-size: 1.25rem;">📱</span>
+                <div class="info-icon">
+                    <i data-lucide="phone"></i>
+                </div>
                 <div>
-                    <label style="margin-bottom: 0; color: var(--text-light);">Kontak Lain</label>
-                    <strong style="display: block;"><?php echo $report['contact']; ?></strong>
+                    <label>Kontak Lain</label>
+                    <strong><?php echo $report['contact']; ?></strong>
                 </div>
             </div>
             <?php endif; ?>
         </div>
 
-        <div class="description-box">
-            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem;">Deskripsi Barang:</h3>
-            <div class="description-content">
-                <?php echo $report['description']; ?>
+        <div class="description-box" style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="align-left" style="width: 18px;"></i>
+                Deskripsi Barang
+            </h3>
+            <div style="line-height: 1.7; color: var(--text);">
+                <?php echo nl2br(htmlspecialchars($report['description'])); ?>
             </div>
         </div>
 
         <?php if (is_admin() || (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $report['user_id'])): ?>
             <div style="margin-top: 2.5rem; display: flex; gap: 1rem;">
-                <a href="delete_report.php?id=<?php echo $report['id']; ?>" class="btn btn-danger" style="flex: 1;" onclick="return confirm('Hapus laporan ini?')">Hapus Laporan</a>
+                <a href="delete_report.php?id=<?php echo $report['id']; ?>" class="btn btn-danger btn-block" onclick="return confirm('Apakah Anda yakin ingin menghapus laporan ini?')">
+                    <i data-lucide="trash-2" style="width: 18px;"></i>
+                    Hapus Laporan
+                </a>
             </div>
         <?php endif; ?>
     </div>
 </div>
 
 <?php if (!empty($matching_reports)): ?>
-<div class="matching-section">
-    <h2 class="matching-title">
-        <span style="font-size: 1.5rem;">🔍</span> Barang yang Mungkin Cocok
+<div class="matching-section animate-fade-in" style="animation-delay: 0.3s;">
+    <h2 class="matching-title" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <i data-lucide="sparkles" style="color: var(--primary);"></i>
+        Barang yang Mungkin Cocok
     </h2>
     <div class="matching-grid">
         <?php foreach ($matching_reports as $match): ?>
-            <div class="report-card" style="border: 2px solid var(--primary);">
-                <div class="report-content">
-                    <span class="badge <?php echo $match['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>">
+            <div class="report-card" style="border: 1px solid var(--primary-light);">
+                <div class="card-body">
+                    <span class="type-badge <?php echo $match['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>" style="font-size: 0.75rem; margin-bottom: 0.5rem;">
                         <?php echo $match['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
                     </span>
-                    <h4 class="report-title"><?php echo $match['item_name']; ?></h4>
-                    <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.5rem;">📍 <?php echo $match['location']; ?></p>
-                    <a href="detail.php?id=<?php echo $match['id']; ?>" class="btn btn-primary btn-block" style="padding: 0.4rem; font-size: 0.9rem;">Lihat</a>
+                    <h4 class="card-title" style="font-size: 1.125rem; margin-bottom: 0.5rem;"><?php echo $match['item_name']; ?></h4>
+                    <p style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.25rem;">
+                        <i data-lucide="map-pin" style="width: 14px;"></i>
+                        <?php echo $match['location']; ?>
+                    </p>
+                    <a href="detail.php?id=<?php echo $match['id']; ?>" class="btn btn-primary btn-block" style="padding: 0.5rem; font-size: 0.875rem;">
+                        Lihat Detail
+                    </a>
                 </div>
             </div>
         <?php endforeach; ?>

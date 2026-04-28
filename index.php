@@ -43,73 +43,79 @@ $loc_stmt = $conn->query("SELECT DISTINCT location FROM reports");
 $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
 ?>
 
-<div class="hero">
-    <h1>Temukan Barang Anda yang Hilang</h1>
-    <p>Platform komunitas untuk melaporkan dan mencari barang hilang atau ditemukan dengan cepat dan mudah.</p>
+<div class="hero animate-fade-in">
+    <h1>Temukan Barang <br><span style="color: var(--primary);">Yang Hilang</span> Kembali</h1>
+    <p>Platform komunitas modern untuk saling membantu menemukan barang berharga Anda dengan cepat dan mudah.</p>
+    
+    <div class="search-container">
+        <form action="" method="GET" class="filters">
+            <div class="filter-group">
+                <i data-lucide="search" style="width: 18px;"></i>
+                <input type="text" name="search" value="<?php echo $search; ?>" class="filter-input" placeholder="Apa yang Anda cari?">
+            </div>
+            <div class="filter-group">
+                <i data-lucide="tag" style="width: 18px;"></i>
+                <select name="type" class="filter-input">
+                    <option value="">Semua Jenis</option>
+                    <option value="lost" <?php echo $type === 'lost' ? 'selected' : ''; ?>>Barang Hilang</option>
+                    <option value="found" <?php echo $type === 'found' ? 'selected' : ''; ?>>Barang Ditemukan</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <i data-lucide="map-pin" style="width: 18px;"></i>
+                <input type="text" name="location" value="<?php echo $location; ?>" class="filter-input" placeholder="Lokasi...">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                Cari Barang
+            </button>
+        </form>
+    </div>
 </div>
 
-<form action="" method="GET" class="filters">
-    <div class="form-group">
-        <label>Cari Barang</label>
-        <input type="text" name="search" value="<?php echo $search; ?>" placeholder="Nama barang...">
-    </div>
-    <div class="form-group">
-        <label>Jenis</label>
-        <select name="type">
-            <option value="">Semua</option>
-            <option value="lost" <?php echo $type === 'lost' ? 'selected' : ''; ?>>Hilang</option>
-            <option value="found" <?php echo $type === 'found' ? 'selected' : ''; ?>>Ditemukan</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label>Lokasi</label>
-        <input type="text" name="location" value="<?php echo $location; ?>" placeholder="Lokasi...">
-    </div>
-    <div class="form-group" style="display: flex; align-items: flex-end;">
-        <button type="submit" class="btn btn-primary btn-block">Filter</button>
-    </div>
-</form>
-
-<div class="report-grid">
+<div class="report-grid animate-fade-in" style="animation-delay: 0.2s;">
     <?php if ($reports->num_rows > 0): ?>
         <?php while($row = $reports->fetch_assoc()): ?>
             <div class="report-card">
-                <div class="report-img-wrapper">
-                    <div class="report-badge">
-                        <span class="badge <?php echo $row['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>">
-                            <?php echo $row['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
-                        </span>
-                    </div>
+                <div class="card-image">
+                    <span class="type-badge <?php echo $row['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>">
+                        <?php echo $row['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
+                    </span>
                     <?php if ($row['image_url']): ?>
-                        <img src="uploads/<?php echo $row['image_url']; ?>" alt="<?php echo $row['item_name']; ?>" class="report-img">
+                        <img src="uploads/<?php echo $row['image_url']; ?>" alt="<?php echo $row['item_name']; ?>">
                     <?php else: ?>
-                        <div class="report-img" style="background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.875rem;">Tanpa Foto</div>
+                        <div style="width: 100%; height: 100%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
+                            <i data-lucide="image-off" style="width: 48px; height: 48px;"></i>
+                        </div>
                     <?php endif; ?>
                 </div>
                 
-                <div class="report-content">
-                    <h3 class="report-title"><?php echo $row['item_name']; ?></h3>
-                    <div class="report-meta">
-                        <div class="meta-item">
-                            <span>📍</span>
+                <div class="card-body">
+                    <h3 class="card-title"><?php echo $row['item_name']; ?></h3>
+                    <div class="card-info">
+                        <div class="info-row">
+                            <i data-lucide="map-pin"></i>
                             <span><?php echo $row['location']; ?></span>
                         </div>
-                        <div class="meta-item">
-                            <span>📅</span>
+                        <div class="info-row">
+                            <i data-lucide="calendar"></i>
                             <span><?php echo date('d M Y', strtotime($row['created_at'])); ?></span>
                         </div>
-                        <div class="meta-item">
-                            <span>👤</span>
-                            <span><?php echo $row['username']; ?></span>
+                        <div class="info-row">
+                            <i data-lucide="user"></i>
+                            <span>Oleh: <?php echo $row['username']; ?></span>
                         </div>
                     </div>
-                    <a href="pages/detail.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-block" style="margin-top: auto;">Lihat Detail</a>
+                    <a href="pages/detail.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-block">
+                        Lihat Detail
+                    </a>
                 </div>
             </div>
         <?php endwhile; ?>
     <?php else: ?>
-        <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: white; border-radius: 1rem;">
-            <p>Tidak ada laporan ditemukan.</p>
+        <div style="grid-column: 1/-1; text-align: center; padding: 5rem; background: white; border-radius: var(--radius); border: 2px dashed var(--border);">
+            <i data-lucide="package-search" style="width: 64px; height: 64px; color: var(--text-light); margin-bottom: 1rem;"></i>
+            <h3>Tidak ada laporan ditemukan</h3>
+            <p style="color: var(--text-light);">Coba ubah kata kunci atau filter pencarian Anda.</p>
         </div>
     <?php endif; ?>
 </div>
