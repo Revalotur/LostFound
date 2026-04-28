@@ -56,7 +56,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="map-pin"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Lokasi Kejadian</label>
                     <strong><?php echo $report['location']; ?></strong>
                 </div>
@@ -65,7 +65,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="calendar"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Tanggal Kejadian</label>
                     <strong><?php echo date('d F Y', strtotime($report['event_date'])); ?></strong>
                 </div>
@@ -74,7 +74,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="user"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Dilaporkan Oleh</label>
                     <strong><?php echo $report['username']; ?></strong>
                 </div>
@@ -83,7 +83,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="mail"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Email Kontak</label>
                     <a href="mailto:<?php echo $report['email']; ?>"><?php echo $report['email']; ?></a>
                 </div>
@@ -93,7 +93,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="phone"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Kontak Lain</label>
                     <strong><?php echo $report['contact']; ?></strong>
                 </div>
@@ -103,7 +103,7 @@ include '../includes/header.php';
                 <div class="info-icon">
                     <i data-lucide="tag"></i>
                 </div>
-                <div>
+                <div class="info-content">
                     <label>Kategori</label>
                     <strong><?php echo $report['category'] ?? 'Lainnya'; ?></strong>
                 </div>
@@ -112,7 +112,7 @@ include '../includes/header.php';
 
         <?php if (!empty($report['latitude']) && !empty($report['longitude'])): ?>
         <div style="margin-top: 2rem;">
-            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
                 <i data-lucide="map" style="width: 18px;"></i>
                 Lokasi di Peta
             </h3>
@@ -120,8 +120,8 @@ include '../includes/header.php';
         </div>
         <?php endif; ?>
 
-        <div class="description-box" style="margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);">
-            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+        <div class="description-box" style="margin-top: 2rem; padding: 1.5rem; background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border);">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
                 <i data-lucide="align-left" style="width: 18px;"></i>
                 Deskripsi Barang
             </h3>
@@ -146,8 +146,18 @@ include '../includes/header.php';
                     <i data-lucide="trash-2" style="width: 18px;"></i>
                     Hapus
                 </button>
+                <button type="button" class="btn" style="flex: 1; background: var(--secondary); color: white; font-weight: 600;" onclick="window.print()">
+                    <i data-lucide="printer" style="width: 18px;"></i>
+                    Cetak Brosur
+                </button>
             </div>
         <?php endif; ?>
+
+        <div class="brochure-footer">
+            <p>Jika Anda menemukan barang ini, mohon segera hubungi kontak di atas.</p>
+            <p style="font-weight: bold; margin-top: 1rem;">Terima Kasih atas Bantuannya!</p>
+            <p style="font-size: 0.8rem; margin-top: 2rem;">Dicetak dari LostFound System - <?php echo date('d/m/Y H:i'); ?></p>
+        </div>
     </div>
 </div>
 
@@ -166,11 +176,11 @@ include '../includes/header.php';
                     </span>
                     <?php if ($match['image_url']): ?>
                         <img src="../uploads/<?php echo $match['image_url']; ?>" alt="<?php echo $match['item_name']; ?>">
-                    <?php else: ?>
-                        <div style="width: 100%; height: 100%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8;">
-                            <i data-lucide="image-off" style="width: 32px; height: 32px;"></i>
-                        </div>
-                    <?php endif; ?>
+<?php else: ?>
+    <div style="width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; color: var(--text-light);">
+        <i data-lucide="image-off" style="width: 32px; height: 32px;"></i>
+    </div>
+<?php endif; ?>
                 </div>
                 <div class="card-body" style="padding: 1.25rem;">
                     <h4 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><?php echo $match['item_name']; ?></h4>

@@ -39,6 +39,12 @@ if (session_status() === PHP_SESSION_NONE) {
                 
                 <div class="nav-links">
                     <a href="<?php echo BASE_URL; ?>" class="nav-link">Beranda</a>
+                    
+                    <button id="theme-toggle" class="nav-link" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; color: var(--text-light);">
+                        <i data-lucide="moon" class="dark-icon"></i>
+                        <i data-lucide="sun" class="light-icon" style="display: none;"></i>
+                    </button>
+
                     <?php if (is_logged_in()): ?>
                         <?php if (is_admin()): ?>
                             <a href="<?php echo BASE_URL; ?>pages/admin.php" class="nav-link">Admin Panel</a>

@@ -21,32 +21,32 @@ include '../includes/header.php';
 ?>
 
 <div style="margin: 2rem 0;">
-    <h1>Admin Dashboard</h1>
-    <p>Kelola semua laporan dan pantau aktivitas sistem.</p>
+    <h1 style="color: var(--text);">Admin Dashboard</h1>
+    <p style="color: var(--text-light);">Kelola semua laporan dan pantau aktivitas sistem.</p>
 </div>
 
 <div class="filters" style="text-align: center;">
-    <div class="stat-card" style="padding: 1rem; background: white; border-radius: 1rem; box-shadow: var(--shadow);">
+    <div class="stat-card" style="padding: 1rem; background: var(--surface); border-radius: 1rem; box-shadow: var(--shadow); border: 1px solid var(--border);">
         <h3 style="font-size: 2rem; color: var(--primary);"><?php echo $total_reports; ?></h3>
-        <p>Total Laporan</p>
+        <p style="color: var(--text-light);">Total Laporan</p>
     </div>
-    <div class="stat-card" style="padding: 1rem; background: white; border-radius: 1rem; box-shadow: var(--shadow);">
+    <div class="stat-card" style="padding: 1rem; background: var(--surface); border-radius: 1rem; box-shadow: var(--shadow); border: 1px solid var(--border);">
         <h3 style="font-size: 2rem; color: var(--danger);"><?php echo $total_lost; ?></h3>
-        <p>Barang Hilang</p>
+        <p style="color: var(--text-light);">Barang Hilang</p>
     </div>
-    <div class="stat-card" style="padding: 1rem; background: white; border-radius: 1rem; box-shadow: var(--shadow);">
+    <div class="stat-card" style="padding: 1rem; background: var(--surface); border-radius: 1rem; box-shadow: var(--shadow); border: 1px solid var(--border);">
         <h3 style="font-size: 2rem; color: var(--success);"><?php echo $total_found; ?></h3>
-        <p>Barang Ditemukan</p>
+        <p style="color: var(--text-light);">Barang Ditemukan</p>
     </div>
-    <div class="stat-card" style="padding: 1rem; background: white; border-radius: 1rem; box-shadow: var(--shadow);">
+    <div class="stat-card" style="padding: 1rem; background: var(--surface); border-radius: 1rem; box-shadow: var(--shadow); border: 1px solid var(--border);">
         <h3 style="font-size: 2rem; color: var(--text);"><?php echo $total_users; ?></h3>
-        <p>Total User</p>
+        <p style="color: var(--text-light);">Total User</p>
     </div>
 </div>
 
-<div class="admin-table-container" style="background: white; border-radius: 1rem; overflow: hidden; box-shadow: var(--shadow); margin-top: 2rem;">
+<div class="admin-table-container" style="background: var(--surface); border-radius: 1rem; overflow: hidden; box-shadow: var(--shadow); margin-top: 2rem; border: 1px solid var(--border);">
     <table style="width: 100%; border-collapse: collapse; text-align: left;">
-        <thead style="background: #f1f5f9;">
+        <thead style="background: var(--bg); color: var(--text-light);">
             <tr>
                 <th style="padding: 1rem;">ID</th>
                 <th style="padding: 1rem;">Barang</th>
@@ -57,7 +57,7 @@ include '../includes/header.php';
                 <th style="padding: 1rem;">Aksi</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody style="color: var(--text);">
             <?php while($row = $reports->fetch_assoc()): ?>
                 <tr style="border-bottom: 1px solid var(--border);">
                     <td style="padding: 1rem;">#<?php echo $row['id']; ?></td>
