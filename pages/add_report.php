@@ -100,10 +100,12 @@ include '../includes/header.php';
 
             <div class="form-group">
                 <label>Pilih Lokasi di Peta (Opsional)</label>
+                <input type="text" id="location-search" placeholder="Cari lokasi, misal 'Stasiun Gambir'">
+                <ul id="location-suggestions" class="location-suggestions"></ul>
                 <div id="map-picker" style="height: 300px; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border);"></div>
                 <input type="hidden" name="latitude" id="lat">
                 <input type="hidden" name="longitude" id="lng">
-                <small style="color: var(--text-light);">Klik pada peta untuk menandai lokasi kejadian.</small>
+                <small style="color: var(--text-light);">Cari lokasi lalu pilih saran untuk menandai secara otomatis, atau klik langsung di peta.</small>
             </div>
 
             <div class="form-group">
@@ -140,7 +142,97 @@ include '../includes/header.php';
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
+    map.invalidateSize();
+
     var marker;
+    var searchInput = document.getElementById('location-search');
+    var suggestionList = document.getElementById('location-suggestions');
+    var locationInput = document.querySelector('input[name="location"]');
+
+    function debounce(func, wait) {
+        var timeout;
+        return function() {
+            var context = this;
+            var args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                func.apply(context, args);
+            }, wait);
+        };
+    }
+
+    function clearSuggestions() {
+        suggestionList.innerHTML = '';
+        suggestionList.style.display = 'none';
+    }
+
+    function selectLocation(result) {
+        var lat = parseFloat(result.lat);
+        var lng = parseFloat(result.lon);
+
+        map.setView([lat, lng], 16);
+
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng]).addTo(map);
+        }
+
+        document.getElementById('lat').value = lat;
+        document.getElementById('lng').value = lng;
+        if (locationInput) {
+            locationInput.value = result.display_name;
+        }
+
+        clearSuggestions();
+    }
+
+    function showSuggestions(results) {
+        suggestionList.innerHTML = '';
+        if (!results || !results.length) {
+            clearSuggestions();
+            return;
+        }
+
+        results.forEach(function(result) {
+            var item = document.createElement('li');
+            item.textContent = result.display_name;
+            item.addEventListener('click', function() {
+                selectLocation(result);
+            });
+            suggestionList.appendChild(item);
+        });
+
+        suggestionList.style.display = 'block';
+    }
+
+    function searchLocation(query) {
+        if (!query || query.length < 3) {
+            clearSuggestions();
+            return;
+        }
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&accept-language=id&q=' + encodeURIComponent(query))
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                showSuggestions(data);
+            })
+            .catch(function() {
+                clearSuggestions();
+            });
+    }
+
+    searchInput.addEventListener('input', debounce(function(e) {
+        searchLocation(e.target.value);
+    }, 300));
+
+    document.addEventListener('click', function(e) {
+        if (!suggestionList.contains(e.target) && e.target !== searchInput) {
+            clearSuggestions();
+        }
+    });
 
     map.on('click', function(e) {
         var lat = e.latlng.lat;
@@ -161,7 +253,7 @@ include '../includes/header.php';
         navigator.geolocation.getCurrentPosition(function(position) {
             var lat = position.coords.latitude;
             var lng = position.coords.longitude;
-            map.setView([lat, lng], 13);
+            map.setView([lat, lng], 13); 
         });
     }
 </script>

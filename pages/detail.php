@@ -208,6 +208,20 @@ include '../includes/header.php';
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
+    // Add geocoder control for searching locations
+    L.Control.geocoder({
+        defaultMarkGeocode: false
+    }).on('markgeocode', function(e) {
+        var bbox = e.geocode.bbox;
+        var poly = L.polygon([
+            bbox.getSouthEast(),
+            bbox.getNorthEast(),
+            bbox.getNorthWest(),
+            bbox.getSouthWest()
+        ]).addTo(map);
+        map.fitBounds(poly.getBounds());
+    }).addTo(map);
+
     L.marker([<?php echo $report['latitude']; ?>, <?php echo $report['longitude']; ?>]).addTo(map)
         .bindPopup('<?php echo addslashes($report['item_name']); ?>')
         .openPopup();
