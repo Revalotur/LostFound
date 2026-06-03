@@ -142,6 +142,11 @@ include '../includes/header.php';
                         </button>
                     </form>
                 <?php endif; ?>
+                <a href="edit_report.php?id=<?php echo $report['id']; ?>" 
+                   class="btn" style="flex: 1; background: var(--secondary); color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i data-lucide="pencil" style="width: 18px;"></i>
+                    Edit
+                </a>
                 <button type="button" class="btn btn-danger" style="flex: 1; font-weight: 600;" onclick="confirmDelete(<?php echo $report['id']; ?>)">
                     <i data-lucide="trash-2" style="width: 18px;"></i>
                     Hapus
