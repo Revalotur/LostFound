@@ -227,4 +227,122 @@ function get_matching_reports($conn, $item_name, $current_id, $category = null) 
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
+
+/**
+ * Buat notifikasi di database
+ */
+function create_notification($conn, $user_id, $report_id, $message, $type = 'match') {
+    $stmt = $conn->prepare("INSERT INTO notifications (user_id, report_id, type, message) VALUES (?, ?, ?, ?)");
+    if (!$stmt) {
+        error_log("Prepare failed: " . $conn->error);
+        return false;
+    }
+    
+    $stmt->bind_param("iiss", $user_id, $report_id, $type, $message);
+    $result = $stmt->execute();
+    $stmt->close();
+    
+    return $result;
+}
+
+/**
+ * Get semua notifikasi user yang belum dibaca
+ */
+function get_unread_notifications($conn, $user_id) {
+    $stmt = $conn->prepare("
+        SELECT n.*, r.item_name, r.type as report_type 
+        FROM notifications n 
+        JOIN reports r ON n.report_id = r.id 
+        WHERE n.user_id = ? AND n.is_read = false 
+        ORDER BY n.created_at DESC 
+        LIMIT 10
+    ");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * Get semua notifikasi user (dengan pagination optional)
+ */
+function get_all_notifications($conn, $user_id, $limit = 20, $offset = 0) {
+    $stmt = $conn->prepare("
+        SELECT n.*, r.item_name, r.type as report_type 
+        FROM notifications n 
+        JOIN reports r ON n.report_id = r.id 
+        WHERE n.user_id = ? 
+        ORDER BY n.created_at DESC 
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->bind_param("iii", $user_id, $limit, $offset);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * Count notifikasi belum dibaca
+ */
+function count_unread_notifications($conn, $user_id) {
+    $result = $conn->query("SELECT COUNT(*) as total FROM notifications WHERE user_id = $user_id AND is_read = false");
+    $row = $result->fetch_assoc();
+    return $row['total'];
+}
+
+/**
+ * Mark notifikasi sebagai read
+ */
+function mark_notification_as_read($conn, $notification_id, $user_id) {
+    $stmt = $conn->prepare("UPDATE notifications SET is_read = true WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $notification_id, $user_id);
+    return $stmt->execute();
+}
+
+/**
+ * Kirim notifikasi ke users yang cocok dengan laporan baru (menggunakan database, bukan email)
+ */
+function notify_matching_users_on_new_report_db($conn, $new_report_id, $item_name, $type, $category) {
+    $matches = get_matching_reports_for_new_report($conn, $item_name, $new_report_id, $category, $type);
+    
+    if (empty($matches)) {
+        return;
+    }
+
+    // Get creator of new report
+    $stmt = $conn->prepare("SELECT user_id FROM reports WHERE id = ?");
+    $stmt->bind_param("i", $new_report_id);
+    $stmt->execute();
+    $creator = $stmt->get_result()->fetch_assoc();
+    $creator_id = $creator['user_id'];
+
+    $type_label = $type === 'lost' ? 'barang hilang' : 'barang ditemukan';
+
+    foreach ($matches as $match) {
+        // Notifikasi ke user yang punya laporan matching
+        $message_to_match_owner = "Ada laporan baru: <strong>$item_name</strong> ($type_label) yang mungkin cocok dengan laporan Anda.";
+        create_notification($conn, $match['user_id'], $new_report_id, $message_to_match_owner, 'match');
+
+        // Notifikasi ke user yang buat laporan baru
+        if ($match['user_id'] != $creator_id) {
+            $message_to_creator = "Laporan Anda cocok dengan laporan: <strong>" . $match['item_name'] . "</strong>.";
+            create_notification($conn, $creator_id, $match['id'], $message_to_creator, 'match');
+        }
+    }
+}
+
+/**
+ * Kirim notifikasi laporan selesai
+ */
+function notify_report_resolved_db($conn, $report_id) {
+    $stmt = $conn->prepare("SELECT user_id, item_name FROM reports WHERE id = ?");
+    $stmt->bind_param("i", $report_id);
+    $stmt->execute();
+    $report = $stmt->get_result()->fetch_assoc();
+
+    if (!$report) {
+        return false;
+    }
+
+    $message = "Laporan Anda untuk <strong>" . $report['item_name'] . "</strong> telah ditandai selesai.";
+    return create_notification($conn, $report['user_id'], $report_id, $message, 'resolved');
+}
 ?>

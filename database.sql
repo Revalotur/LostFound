@@ -32,6 +32,19 @@ CREATE TABLE IF NOT EXISTS reports (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    report_id INT NOT NULL,
+    type ENUM('match', 'resolved') DEFAULT 'match',
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+);
+
 -- Optional: Insert initial admin data (password: admin123)
 -- Hash: $2y$10$koo8hP2FegUHE17.WejGy.dMNu.2Zz4dsm84M9Udf9cpdbUpb7Xmm
 INSERT INTO users (username, email, password, role) VALUES 

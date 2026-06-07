@@ -48,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $new_report_id = $conn->insert_id;
-            notify_matching_users_on_new_report($conn, $new_report_id, $item_name, $type, $category, $location);
-            redirect("../index.php", "Laporan berhasil dibuat! Jika ada kecocokan, notifikasi email akan dikirim.", "success");
+            notify_matching_users_on_new_report_db($conn, $new_report_id, $item_name, $type, $category);
+            redirect("../index.php", "Laporan berhasil dibuat! Notifikasi akan dikirim ke user yang cocok.", "success");
         } else {
             $error = "Gagal menyimpan laporan: " . $stmt->error;
         }

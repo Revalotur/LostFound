@@ -17,6 +17,6 @@ try {
 }
 
 // Global path constants
-define('BASE_URL', 'http://localhost/BarangHilang/');
+define('BASE_URL', 'http://localhost/LostFound/');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 ?>

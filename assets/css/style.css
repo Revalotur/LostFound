@@ -57,6 +57,16 @@ a {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Link hover dengan color transition */
+a[href]:not(.btn):not(.logo):hover {
+    color: var(--primary);
+}
+
+/* Link dengan icon - glow effect */
+a[href]:not(.btn):not(.logo) [data-lucide] {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Layout */
 .container {
     max-width: 1200px;
@@ -144,9 +154,9 @@ nav {
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
-    filter: brightness(1.1);
+    transform: translateY(-4px);
+    box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.5);
+    filter: brightness(1.15);
 }
 
 .btn-danger {
@@ -161,6 +171,39 @@ nav {
 .btn-danger:hover {
     background: var(--danger);
     color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 20px 35px -10px rgba(239, 68, 68, 0.4);
+}
+
+/* Tombol lainnya hover effect */
+.btn:not(.btn-primary):not(.btn-danger):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon Glow Effect */
+[data-lucide] {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button [data-lucide]:hover,
+a [data-lucide]:hover,
+[data-lucide]:hover {
+    filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+    color: var(--primary);
+}
+
+.nav-link [data-lucide]:hover {
+    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.7));
+}
+
+/* Icon di button mendapat glow saat button di-hover */
+.btn-primary:hover [data-lucide] {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+}
+
+.btn-danger:hover [data-lucide] {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
 }
 
 .btn-block {
@@ -264,8 +307,8 @@ nav {
 
 .report-card:hover {
     transform: translateY(-12px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary-light);
+    box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.25);
+    border-color: var(--primary);
 }
 
 .card-image {
@@ -465,7 +508,7 @@ nav {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--surface);
     color: var(--text);
 }
@@ -475,10 +518,15 @@ nav {
     opacity: 0.5;
 }
 
+.form-group input:hover, .form-group select:hover, .form-group textarea:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px -2px rgba(99, 102, 241, 0.2);
+}
+
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 4px 12px -4px rgba(99, 102, 241, 0.3);
 }
 
 .location-suggestions {
