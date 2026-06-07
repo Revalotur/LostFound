@@ -24,6 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $update_stmt->bind_param("si", $status, $id);
         
         if ($update_stmt->execute()) {
+            if ($status === 'resolved') {
+                send_report_resolved_email($conn, $id);
+            }
             redirect("detail.php?id=$id", "Status laporan berhasil diperbarui!", "success");
         } else {
             redirect("detail.php?id=$id", "Gagal memperbarui status.", "danger");

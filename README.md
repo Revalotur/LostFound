@@ -29,6 +29,7 @@ Sistem Informasi Laporan Kehilangan dan Penemuan Barang Berbasis Web.
 - **Otentikasi**: Registrasi dan Login user.
 - **Laporan**: Membuat laporan barang hilang atau ditemukan lengkap dengan foto.
 - **Matching System**: Menampilkan barang yang mungkin cocok secara otomatis berdasarkan kemiripan nama.
+- **Notifikasi Email Otomatis**: Mengirim email ketika ada laporan baru yang cocok atau laporan berhasil diselesaikan.
 - **Search & Filter**: Pencarian barang berdasarkan nama, jenis, dan lokasi secara real-time.
 - **Admin Panel**: Dashboard khusus untuk memantau dan menghapus laporan.
 - **Modern UI**: Desain responsif dan bersih menggunakan CSS Grid/Flexbox.

@@ -47,7 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("isssssddss", $user_id, $type, $item_name, $category, $description, $location, $latitude, $longitude, $event_date, $image_url);
 
         if ($stmt->execute()) {
-            redirect("../index.php", "Laporan berhasil dibuat!", "success");
+            $new_report_id = $conn->insert_id;
+            notify_matching_users_on_new_report($conn, $new_report_id, $item_name, $type, $category, $location);
+            redirect("../index.php", "Laporan berhasil dibuat! Jika ada kecocokan, notifikasi email akan dikirim.", "success");
         } else {
             $error = "Gagal menyimpan laporan: " . $stmt->error;
         }
