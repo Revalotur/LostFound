@@ -49,6 +49,58 @@ if (session_status() === PHP_SESSION_NONE) {
                     </button>
 
                     <?php if (is_logged_in()): ?>
+                        <!-- Notification Bell -->
+                        <div style="position: relative;">
+                            <button id="notif-bell" class="nav-link" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; color: var(--text-light); position: relative;">
+                                <i data-lucide="bell" style="width: 20px;"></i>
+                                <?php 
+                                    $unread_count = count_unread_notifications($conn, $_SESSION['user_id']);
+                                    if ($unread_count > 0):
+                                ?>
+                                <span style="position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
+                                    <?php echo $unread_count > 9 ? '9+' : $unread_count; ?>
+                                </span>
+                                <?php endif; ?>
+                            </button>
+                            
+                            <!-- Notification Dropdown -->
+                            <div id="notif-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); width: 320px; max-height: 400px; overflow-y: auto; z-index: 1000; margin-top: 0.5rem;">
+                                <?php 
+                                    $unread_notifs = get_unread_notifications($conn, $_SESSION['user_id']);
+                                    if (!empty($unread_notifs)):
+                                        foreach ($unread_notifs as $notif):
+                                ?>
+                                <div class="notif-item" data-notif-id="<?php echo $notif['id']; ?>" style="padding: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'" onclick="markNotificationAsRead(<?php echo $notif['id']; ?>, <?php echo $notif['report_id']; ?>)">
+                                    <div style="font-size: 0.85rem; color: var(--text-light);">
+                                        <?php 
+                                            echo $notif['type'] === 'match' ? '🔔 Match' : '✓ Selesai';
+                                        ?>
+                                    </div>
+                                    <div style="color: var(--text); margin-top: 0.3rem; font-size: 0.9rem;">
+                                        <?php echo $notif['message']; ?>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.3rem;">
+                                        <?php echo time_ago($notif['created_at']); ?>
+                                    </div>
+                                </div>
+                                <?php 
+                                        endforeach;
+                                    else:
+                                ?>
+                                <div style="padding: 1.5rem; text-align: center; color: var(--text-light);">
+                                    Tidak ada notifikasi
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($unread_notifs)): ?>
+                                <div style="padding: 0.75rem; text-align: center; border-top: 1px solid var(--border);">
+                                    <a href="<?php echo BASE_URL; ?>pages/notifications.php" style="color: var(--primary); text-decoration: none; font-weight: 600; font-size: 0.85rem;">
+                                        Lihat Semua Notifikasi →
+                                    </a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                         <?php if (is_admin()): ?>
                             <a href="<?php echo BASE_URL; ?>pages/admin.php" class="nav-link">Admin Panel</a>
                         <?php endif; ?>
