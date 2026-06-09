@@ -153,6 +153,20 @@ nav {
     box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
 }
 
+.btn-secondary {
+    background: var(--border);
+    color: var(--text);
+    border: 1px solid transparent;
+}
+
+.btn-secondary:hover {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+}
+
 .btn-primary:hover {
     transform: translateY(-4px);
     box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.5);
@@ -344,14 +358,29 @@ a [data-lucide]:hover,
     z-index: 10;
 }
 
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 0.03em;
+    border: 1px solid transparent;
+}
+
 .badge-lost {
-    background: rgba(239, 68, 68, 0.9);
-    color: white;
+    background: rgba(254, 226, 226, 0.9);
+    color: #991b1b;
+    border-color: rgba(239, 68, 68, 0.25);
 }
 
 .badge-found {
-    background: rgba(16, 185, 129, 0.9);
-    color: white;
+    background: rgba(209, 250, 229, 0.95);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.3);
 }
 
 .card-body {
@@ -653,6 +682,32 @@ a [data-lucide]:hover,
     border: 1px solid var(--border);
     overflow: hidden;
     margin-bottom: 3rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.detail-image-card {
+    width: min(100%, 700px);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detail-image-card img {
+    width: 100%;
+    max-height: 520px;
+    object-fit: contain;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+}
+
+.detail-info-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .detail-header {
@@ -683,6 +738,17 @@ a [data-lucide]:hover,
 
 .detail-body {
     padding: 2.5rem;
+}
+
+@media (max-width: 992px) {
+    .detail-container {
+        grid-template-columns: 1fr;
+        padding: 1.5rem;
+    }
+
+    .detail-image-card {
+        width: 100%;
+    }
 }
 
 .info-grid {

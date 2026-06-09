@@ -46,7 +46,7 @@ include '../includes/header.php';
 
 <div class="admin-table-container" style="background: var(--surface); border-radius: 1rem; overflow: hidden; box-shadow: var(--shadow); margin-top: 2rem; border: 1px solid var(--border);">
     <table style="width: 100%; border-collapse: collapse; text-align: left;">
-        <thead style="background: var(--bg); color: var(--text-light);">
+        <thead style="background: var(--bg); color: var(--text);">
             <tr>
                 <th style="padding: 1rem;">ID</th>
                 <th style="padding: 1rem;">Barang</th>
@@ -64,14 +64,14 @@ include '../includes/header.php';
                     <td style="padding: 1rem; font-weight: 600;"><?php echo $row['item_name']; ?></td>
                     <td style="padding: 1rem;">
                         <span class="badge <?php echo $row['type'] === 'lost' ? 'badge-lost' : 'badge-found'; ?>">
-                            <?php echo $row['type']; ?>
+                            <?php echo ucfirst($row['type']); ?>
                         </span>
                     </td>
                     <td style="padding: 1rem;"><?php echo $row['location']; ?></td>
                     <td style="padding: 1rem;"><?php echo $row['username']; ?></td>
                     <td style="padding: 1rem;"><?php echo date('d/m/y', strtotime($row['created_at'])); ?></td>
                     <td style="padding: 1rem; display: flex; gap: 0.5rem;">
-                        <a href="detail.php?id=<?php echo $row['id']; ?>" class="btn" style="background: #e2e8f0; padding: 0.3rem 0.6rem; font-size: 0.8rem;">Detail</a>
+                        <a href="detail.php?id=<?php echo $row['id']; ?>" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Detail</a>
                         <button type="button" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="confirmDelete(<?php echo $row['id']; ?>)">Hapus</button>
                     </td>
                 </tr>
