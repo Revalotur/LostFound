@@ -33,3 +33,7 @@ Sistem Informasi Laporan Kehilangan dan Penemuan Barang Berbasis Web.
 - **Search & Filter**: Pencarian barang berdasarkan nama, jenis, dan lokasi secara real-time.
 - **Admin Panel**: Dashboard khusus untuk memantau dan menghapus laporan.
 - **Modern UI**: Desain responsif dan bersih menggunakan CSS Grid/Flexbox.
+
+Link Figma:
+https://www.figma.com/design/xLTpzS9ABN4jblBaP2ROYK/Web-Design-%7C-Website-Design-%7C-Software-House-Website-%7C-Software-Company-Website--Community-?node-id=156-2&t=sJl0M62masfg8zdh-1
+
