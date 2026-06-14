@@ -102,15 +102,21 @@ nav {
 }
 
 .logo-icon {
-    width: 40px;
-    height: 40px;
-    background: var(--primary);
-    color: white;
-    border-radius: 10px;
+    width: auto;
+    height: auto;
+    background: transparent;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: none;
+    flex-shrink: 0;
+}
+
+.logo-img {
+    width: 42px;
+    height: 42px;
+    display: block;
 }
 
 .nav-links {
@@ -252,19 +258,20 @@ a [data-lucide]:hover,
 
 /* Search & Filter Bar */
 .search-container {
-    background: var(--surface);
-    padding: 0.75rem;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-    max-width: 900px;
+    background: rgba(255, 255, 255, 0.12);
+    padding: 1.75rem;
+    border-radius: 2rem;
+    box-shadow: 0 28px 90px rgba(15, 23, 42, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 1060px;
     margin: 0 auto;
+    backdrop-filter: blur(22px);
 }
 
 .filters {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 0.75rem;
+    grid-template-columns: minmax(260px, 2fr) minmax(190px, 1fr) minmax(190px, 1fr);
+    gap: 1rem;
     align-items: center;
 }
 
@@ -272,6 +279,49 @@ a [data-lucide]:hover,
     position: relative;
     display: flex;
     align-items: center;
+    min-width: 0;
+}
+
+.filter-location {
+    grid-column: 1 / -1;
+}
+
+.btn-search {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 1.1rem 1.5rem;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+}
+
+@media (max-width: 900px) {
+    .filters {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-location,
+    .btn-search {
+        grid-column: auto;
+    }
+
+    .search-container {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .search-container {
+        padding: 1rem;
+    }
+
+    .filter-input {
+        padding: 0.9rem 1rem 0.9rem 2.75rem;
+    }
+
+    .btn-search {
+        padding: 1rem;
+        font-size: 1rem;
+    }
 }
 
 .filter-group i {
@@ -753,17 +803,17 @@ a [data-lucide]:hover,
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2.5rem;
 }
 
 .info-item {
     background: var(--bg);
-    padding: 1rem;
+    padding: 1.25rem;
     border-radius: var(--radius);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
     border: 1px solid var(--border);
     min-width: 0; /* Important for flex child overflow */
@@ -777,11 +827,11 @@ a [data-lucide]:hover,
 
 .info-icon {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     background: var(--surface);
     color: var(--primary);
-    border-radius: 10px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -795,30 +845,33 @@ a [data-lucide]:hover,
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-bottom: 0.35rem;
 }
 
-.info-item strong, .info-item a {
+.info-item strong,
+.info-item a {
     color: var(--text);
     display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.5;
 }
 
 .description-box {
     background: var(--bg) !important;
     border: 1px solid var(--border) !important;
+    padding: 1.75rem !important;
+    border-radius: var(--radius) !important;
 }
 
 .description-box h3 {
     color: var(--text) !important;
+    margin-bottom: 1rem;
 }
 
 .description-box div {
-    color: var(--text-light) !important;
+    color: var(--text) !important;
+    line-height: 1.8;
 }
 
 /* Footer */

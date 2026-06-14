@@ -81,11 +81,11 @@ $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
                     <option value="Lainnya" <?php echo $category === 'Lainnya' ? 'selected' : ''; ?>>Lainnya</option>
                 </select>
             </div>
-            <div class="filter-group">
+            <div class="filter-group filter-location">
                 <i data-lucide="map-pin" style="width: 18px;"></i>
                 <input type="text" name="location" value="<?php echo $location; ?>" class="filter-input" placeholder="Lokasi...">
             </div>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary btn-search">
                 Cari Barang
             </button>
         </form>

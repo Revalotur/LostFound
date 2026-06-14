@@ -13,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lost & Found - Temukan Barang Anda</title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css?v=1.1">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css?v=1.3">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <nav>
                 <a href="<?php echo BASE_URL; ?>" class="logo">
                     <div class="logo-icon">
-                        <i data-lucide="search"></i>
+                        <img src="<?php echo BASE_URL; ?>assets/images/LogoNew.png" alt="LostFound" class="logo-img">
                     </div>
                     LostFound
                 </a>
