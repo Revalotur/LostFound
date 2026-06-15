@@ -2,8 +2,8 @@
 // config/db.php
 
 $host = 'localhost';
-$user = 'root';
-$pass = '';
+$user = 'fabio';
+$pass = '123456';
 $db   = 'lost_and_found_db';
 
 // Menggunakan mysqli dengan mode exception
@@ -17,6 +17,6 @@ try {
 }
 
 // Global path constants
-define('BASE_URL', 'http://localhost/BarangHilang/LostFound/');
+define('BASE_URL', 'http://localhost:8000/');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 ?>
