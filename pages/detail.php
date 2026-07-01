@@ -11,14 +11,23 @@ if ($id <= 0) {
     exit();
 }
 
-// Get Report Detail
-$stmt = $conn->prepare("SELECT r.*, u.username, u.email, u.contact FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = ?");
+// Get Report Detail dengan face_verified
+$stmt = $conn->prepare("SELECT r.*, u.username, u.email, u.contact, u.face_verified FROM reports r JOIN users u ON r.user_id = u.id WHERE r.id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $report = $stmt->get_result()->fetch_assoc();
 
 if (!$report) {
     redirect("../index.php", "Laporan tidak ditemukan.", "danger");
+}
+
+// Cek apakah ada room chat untuk posting ini (untuk pemilik posting)
+$existing_room = null;
+if (is_logged_in() && $_SESSION['user_id'] == $report['user_id']) {
+    $stmt = $conn->prepare("SELECT * FROM chat_rooms WHERE report_id = ? AND owner_id = ?");
+    $stmt->bind_param("ii", $id, $_SESSION['user_id']);
+    $stmt->execute();
+    $existing_room = $stmt->get_result()->fetch_assoc();
 }
 
 // Get Matching Reports
@@ -76,7 +85,20 @@ include '../includes/header.php';
                 </div>
                 <div class="info-content">
                     <label>Dilaporkan Oleh</label>
-                    <strong><?php echo $report['username']; ?></strong>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <strong><?php echo $report['username']; ?></strong>
+                        <?php if ($report['face_verified']): ?>
+                            <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i>
+                                Identity Verified
+                            </span>
+                        <?php else: ?>
+                            <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(100, 116, 139, 0.1); color: var(--text-light); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                <i data-lucide="circle" style="width: 14px; height: 14px;"></i>
+                                Not Verified
+                            </span>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
             <div class="info-item">
@@ -129,6 +151,26 @@ include '../includes/header.php';
                 <?php echo nl2br(htmlspecialchars($report['description'])); ?>
             </div>
         </div>
+
+        <!-- Tombol Hubungi Pemilik -->
+        <?php if (is_logged_in() && $_SESSION['user_id'] != $report['user_id']): ?>
+            <div style="margin-top: 2rem;">
+                <button id="chat-btn" class="btn btn-primary btn-block" style="padding: 15px; font-size: 1.05rem;">
+                    <i data-lucide="message-square" style="width: 20px; height: 20px;"></i>
+                    Hubungi Pemilik
+                </button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Tombol Lihat Chat untuk Pemilik Barang -->
+        <?php if (is_logged_in() && $_SESSION['user_id'] == $report['user_id'] && $existing_room): ?>
+            <div style="margin-top: 2rem;">
+                <a href="chat.php?id=<?php echo $existing_room['id']; ?>" class="btn btn-success btn-block" style="padding: 15px; font-size: 1.05rem; background: #10b981;">
+                    <i data-lucide="message-square" style="width: 20px; height: 20px;"></i>
+                    Lihat Chat
+                </a>
+            </div>
+        <?php endif; ?>
 
         <?php if (is_admin() || (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $report['user_id'])): ?>
             <div class="detail-actions">
@@ -267,4 +309,38 @@ function confirmDelete(id) {
         }
     })
 }
+
+// Tombol Chat
+<?php if (is_logged_in() && $_SESSION['user_id'] != $report['user_id']): ?>
+document.getElementById('chat-btn').addEventListener('click', async function() {
+    try {
+        const response = await fetch('<?php echo BASE_URL; ?>api/create_room.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_id: <?php echo $report['id']; ?> })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.href = '<?php echo BASE_URL; ?>pages/chat.php?id=' + result.room_id;
+        } else if (result.redirect_to) {
+            window.location.href = result.redirect_to + '?redirect_to=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>';
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: result.message || 'Terjadi kesalahan'
+            });
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Terjadi kesalahan'
+        });
+    }
+});
+<?php endif; ?>
 </script>

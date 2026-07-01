@@ -104,10 +104,10 @@ if (session_status() === PHP_SESSION_NONE) {
                         <?php if (is_admin()): ?>
                             <a href="<?php echo BASE_URL; ?>pages/admin.php" class="nav-link">Admin Panel</a>
                         <?php endif; ?>
-                        <div class="user-info" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text);">
+                        <a href="<?php echo BASE_URL; ?>pages/profile.php" class="user-info" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text)'">
                             <i data-lucide="user" style="width: 18px;"></i>
                             <?php echo $_SESSION['username']; ?>
-                        </div>
+                        </a>
                         <a href="<?php echo BASE_URL; ?>auth/logout.php" class="btn btn-danger" style="padding: 0.5rem 1rem;">Keluar</a>
                         <a href="<?php echo BASE_URL; ?>pages/add_report.php" class="btn btn-primary">
                             <i data-lucide="plus-circle" style="width: 18px;"></i>

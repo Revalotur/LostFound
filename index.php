@@ -8,7 +8,7 @@ $type   = isset($_GET['type']) ? sanitize($_GET['type']) : '';
 $location = isset($_GET['location']) ? sanitize($_GET['location']) : '';
 $category = isset($_GET['category']) ? sanitize($_GET['category']) : '';
 
-$sql = "SELECT r.*, u.username FROM reports r JOIN users u ON r.user_id = u.id WHERE 1=1";
+$sql = "SELECT r.*, u.username, u.face_verified FROM reports r JOIN users u ON r.user_id = u.id WHERE 1=1";
 $params = [];
 $types = "";
 
@@ -130,7 +130,12 @@ $locations = $loc_stmt->fetch_all(MYSQLI_ASSOC);
                         </div>
                         <div class="info-row">
                             <i data-lucide="user"></i>
-                            <span>Oleh: <?php echo $row['username']; ?></span>
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                Oleh: <?php echo $row['username']; ?>
+                                <?php if ($row['face_verified']): ?>
+                                    <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: var(--success);"></i>
+                                <?php endif; ?>
+                            </span>
                         </div>
                     </div>
                     <a href="pages/detail.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-block">

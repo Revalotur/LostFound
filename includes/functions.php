@@ -1,6 +1,10 @@
 <?php
 // includes/functions.php
 
+// Konfigurasi Flask Face Service
+define('FLASK_API_URL', 'http://localhost:5000');
+define('DEVELOPMENT_MODE', false); // Ubah ke false untuk production
+
 /**
  * Membersihkan input dari karakter berbahaya
  */
@@ -20,6 +24,140 @@ function is_logged_in() {
  */
 function is_admin() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
+
+/**
+ * Cek apakah user sudah verifikasi wajah
+ */
+function is_face_verified($conn, $user_id = null) {
+    if ($user_id === null) {
+        if (!isset($_SESSION['user_id'])) return false;
+        $user_id = $_SESSION['user_id'];
+    }
+    
+    $stmt = $conn->prepare("SELECT face_verified FROM users WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+    
+    return $user ? (bool)$user['face_verified'] : false;
+}
+
+/**
+ * Kirim request ke Flask Face API
+ */
+function call_flask_api($endpoint, $data = [], $method = 'POST') {
+    $url = FLASK_API_URL . $endpoint;
+    
+    $ch = curl_init();
+    
+    $json_data = json_encode($data);
+    
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($json_data)
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+    
+    if ($error) {
+        return [
+            'success' => false,
+            'message' => 'Connection error: ' . $error,
+            'http_code' => 0
+        ];
+    }
+    
+    $result = json_decode($response, true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return [
+            'success' => false,
+            'message' => 'Invalid response from server',
+            'http_code' => $http_code,
+            'raw_response' => $response
+        ];
+    }
+    
+    return array_merge($result, ['http_code' => $http_code]);
+}
+
+/**
+ * Register wajah user ke Flask API
+ */
+function register_face($conn, $user_id, $image_base64) {
+    // DEVELOPMENT MODE: langsung berhasil tanpa Flask
+    if (DEVELOPMENT_MODE) {
+        error_log("DEVELOPMENT MODE: Skipping Flask API call");
+        
+        // Update status di database
+        $stmt = $conn->prepare("UPDATE users SET face_verified = TRUE WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        
+        // Catat di face_verifications
+        $stmt = $conn->prepare("INSERT INTO face_verifications (user_id, verified_at) VALUES (?, NOW())");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        
+        return [
+            'success' => true,
+            'message' => 'Face registered successfully (DEVELOPMENT MODE)'
+        ];
+    }
+    
+    $response = call_flask_api('/register-face', [
+        'user_id' => $user_id,
+        'image' => $image_base64
+    ]);
+    
+    if (!$response['success']) {
+        return $response;
+    }
+    
+    // Update status di database
+    $stmt = $conn->prepare("UPDATE users SET face_verified = TRUE WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    
+    // Catat di face_verifications
+    $stmt = $conn->prepare("INSERT INTO face_verifications (user_id, verified_at) VALUES (?, NOW())");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    
+    return [
+        'success' => true,
+        'message' => 'Face registered and verified successfully'
+    ];
+}
+
+/**
+ * Verify wajah user
+ */
+function verify_face($user_id, $image_base64) {
+    return call_flask_api('/verify-face', [
+        'user_id' => $user_id,
+        'image' => $image_base64
+    ]);
+}
+
+/**
+ * Detect face (untuk challenge)
+ */
+function detect_face($image_base64) {
+    return call_flask_api('/detect-face', [
+        'image' => $image_base64
+    ]);
 }
 
 /**
