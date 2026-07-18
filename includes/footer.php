@@ -60,6 +60,9 @@
             }
         });
 
+        // CSRF Token global
+        const csrfToken = '<?php echo csrf_token(); ?>';
+
         // Mark notification as read
         function markNotificationAsRead(notifId, reportId) {
             fetch('<?php echo BASE_URL; ?>api/mark_notification_read.php', {
@@ -68,7 +71,8 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    notification_id: notifId
+                    notification_id: notifId,
+                    csrf_token: csrfToken
                 })
             })
             .then(response => response.json())

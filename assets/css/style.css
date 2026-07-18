@@ -620,25 +620,60 @@ a [data-lucide]:hover,
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
-    box-shadow: var(--shadow-sm);
-    max-height: 220px;
+    box-shadow: var(--shadow);
+    max-height: 260px;
     overflow-y: auto;
     z-index: 999;
 }
 
 .location-suggestions li {
-    padding: 0.75rem 1rem;
+    padding: 0.7rem 1rem;
     cursor: pointer;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
     color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 .location-suggestions li:last-child {
     border-bottom: none;
 }
 
-.location-suggestions li:hover {
-    background: rgba(99, 102, 241, 0.08);
+.location-suggestions li .loc-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--text-light);
+}
+
+.location-suggestions li .loc-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.location-suggestions li mark {
+    background: transparent;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.location-suggestions li:hover,
+.location-suggestions li.active {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.location-suggestions .loc-loading,
+.location-suggestions .loc-empty {
+    padding: 0.7rem 1rem;
+    color: var(--text-light);
+    font-size: 0.85rem;
+    cursor: default;
+}
+
+.location-suggestions .loc-loading:hover {
+    background: transparent;
 }
 
 .badge-success {

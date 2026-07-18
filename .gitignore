@@ -1,1 +1,37 @@
-uploads/IMG_6a27b651548818.19648527.jpg
+# Environment
+.env
+
+# Uploads (keep folder structure, ignore uploaded files)
+uploads/*
+!uploads/.gitkeep
+
+# Face service embeddings (user face data - sensitive, keep folder only)
+face_service/embeddings/*
+!face_service/embeddings/.gitkeep
+
+# Face service temp
+face_service/temp/*
+!face_service/temp/.gitkeep
+
+# Logs
+*.log
+C:Temp*.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE / Editor
+.vscode/
+
+# Windows / junk artifacts
+nul
+nul/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Keep Face Recognition ML models pushed to repo
+!face_service/models/models/buffalo_sc.zip
+!face_service/models/models/buffalo_sc/

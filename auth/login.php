@@ -12,26 +12,34 @@ if (is_logged_in()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = sanitize($_POST['username']);
-    $password = $_POST['password'];
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        $error = "Token CSRF tidak valid.";
+    } elseif (!check_rate_limit($conn, 'login', 5, 15)) {
+        $error = "Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.";
+    } else {
+        $username = sanitize($_POST['username']);
+        $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
+        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-    if ($user = $result->fetch_assoc()) {
-        if (password_verify($password, $user['password'])) {
+        if ($user = $result->fetch_assoc()) {
+            if (password_verify($password, $user['password'])) {
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
             
+            log_audit($conn, 'login', 'User logged in', $user['id']);
             redirect("../index.php", "Selamat datang kembali, " . $user['username'] . "!", "success");
+            } else {
+                $error = "Password salah!";
+            }
         } else {
-            $error = "Password salah!";
+            $error = "Username tidak ditemukan!";
         }
-    } else {
-        $error = "Username tidak ditemukan!";
     }
 }
 ?>
@@ -68,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form action="" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="form-group">
                 <label>Username</label>
                 <div style="position: relative;">

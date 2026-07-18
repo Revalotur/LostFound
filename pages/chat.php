@@ -44,6 +44,9 @@ if ($is_initiator && !is_face_verified($conn)) {
     redirect('../pages/face_verification.php?redirect_to=' . urlencode($_SERVER['REQUEST_URI']), 'Please verify your face first', 'warning');
 }
 
+// Catat akses chat ke audit trail
+log_chat_access($conn, $user_id, $room_id, 'access_chat');
+
 // Dapatkan info partner
 $stmt = $conn->prepare("SELECT username, face_verified FROM users WHERE id = ?");
 $stmt->bind_param("i", $room['chat_partner_id']);
@@ -63,7 +66,7 @@ include '../includes/header.php';
                 </a>
                 <div>
                     <h2 style="margin: 0; font-size: 1.25rem; color: var(--text); display: flex; align-items: center; gap: 8px;">
-                        <?php echo htmlspecialchars($partner['username']); ?>
+                        <?php echo e($partner['username']); ?>
                         <?php if ($partner['face_verified']): ?>
                             <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
                                 <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i>
@@ -77,7 +80,7 @@ include '../includes/header.php';
                         <?php endif; ?>
                     </h2>
                     <p style="margin: 5px 0 0 0; color: var(--text-light); font-size: 0.875rem;">
-                        Tentang: <?php echo htmlspecialchars($room['item_name']); ?>
+                        Tentang: <?php echo e($room['item_name']); ?>
                     </p>
                 </div>
             </div>
@@ -210,7 +213,8 @@ include '../includes/header.php';
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     room_id: roomId,
-                    message: message
+                    message: message,
+                    csrf_token: csrfToken
                 })
             });
             

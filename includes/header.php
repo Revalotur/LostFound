@@ -77,7 +77,7 @@ if (session_status() === PHP_SESSION_NONE) {
                                         ?>
                                     </div>
                                     <div style="color: var(--text); margin-top: 0.3rem; font-size: 0.9rem;">
-                                        <?php echo $notif['message']; ?>
+                                        <?php echo e_html($notif['message']); ?>
                                     </div>
                                     <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 0.3rem;">
                                         <?php echo time_ago($notif['created_at']); ?>
@@ -104,6 +104,30 @@ if (session_status() === PHP_SESSION_NONE) {
                         <?php if (is_admin()): ?>
                             <a href="<?php echo BASE_URL; ?>pages/admin.php" class="nav-link">Admin Panel</a>
                         <?php endif; ?>
+
+                        <?php
+                            $chat_unread = 0;
+                            if (is_logged_in()) {
+                                $cu_stmt = $conn->prepare("
+                                    SELECT COUNT(*) as total FROM chat_messages cm
+                                    JOIN chat_rooms cr ON cm.room_id = cr.id
+                                    WHERE cm.sender_id != ? AND cm.is_read = FALSE
+                                      AND (cr.initiator_id = ? OR cr.owner_id = ?)
+                                ");
+                                $cu_stmt->bind_param("iii", $_SESSION['user_id'], $_SESSION['user_id'], $_SESSION['user_id']);
+                                $cu_stmt->execute();
+                                $chat_unread = (int)$cu_stmt->get_result()->fetch_assoc()['total'];
+                            }
+                        ?>
+                        <a href="<?php echo BASE_URL; ?>pages/chats.php" class="nav-link" style="position: relative; display: flex; align-items: center; gap: 0.5rem;">
+                            <i data-lucide="message-square" style="width: 20px;"></i>
+                            <span>Pesan</span>
+                            <?php if ($chat_unread > 0): ?>
+                            <span style="position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border-radius: 50%; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 0 4px;">
+                                <?php echo $chat_unread > 9 ? '9+' : $chat_unread; ?>
+                            </span>
+                            <?php endif; ?>
+                        </a>
                         <a href="<?php echo BASE_URL; ?>pages/profile.php" class="user-info" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text)'">
                             <i data-lucide="user" style="width: 18px;"></i>
                             <?php echo $_SESSION['username']; ?>

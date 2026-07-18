@@ -23,7 +23,7 @@ Sistem Informasi Laporan Kehilangan dan Penemuan Barang Berbasis Web.
 
 ## Data Login Default (Admin)
 - **Username**: `admin`
-- **Password**: `admin123`
+- **Password**: `Admin_f746f6f1` (GANTI SETELAH LOGIN PERTAMA!)
 
 ## Fitur Utama
 - **Otentikasi**: Registrasi dan Login user.

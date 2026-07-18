@@ -9,6 +9,9 @@ if (!is_logged_in()) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        redirect("detail.php?id=" . (int)($_POST['id'] ?? 0), "Token CSRF tidak valid.", "danger");
+    }
     $id = (int)$_POST['id'];
     $status = sanitize($_POST['status']);
     $user_id = $_SESSION['user_id'];
@@ -24,10 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $update_stmt->bind_param("si", $status, $id);
         
         if ($update_stmt->execute()) {
-            if ($status === 'resolved') {
-                notify_report_resolved_db($conn, $id);
-            }
-            redirect("detail.php?id=$id", "Status laporan berhasil diperbarui!", "success");
+                log_audit($conn, 'update_status', "Report #$id status changed to $status");
+                if ($status === 'resolved') {
+                    notify_report_resolved_db($conn, $id);
+                }
+                if (is_admin()) {
+                    redirect("admin.php", "Status laporan berhasil diperbarui!", "success");
+                }
+                redirect("detail.php?id=$id", "Status laporan berhasil diperbarui!", "success");
         } else {
             redirect("detail.php?id=$id", "Gagal memperbarui status.", "danger");
         }

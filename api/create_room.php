@@ -34,6 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 
+if (!isset($input['csrf_token']) || !verify_csrf($input['csrf_token'])) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Token CSRF tidak valid.'
+    ]);
+    exit;
+}
+
 if (!isset($input['report_id'])) {
     echo json_encode([
         'success' => false,

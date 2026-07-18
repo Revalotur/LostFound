@@ -19,60 +19,68 @@ $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Cek apakah ini form update profil atau ubah password
-    if (isset($_POST['action']) && $_POST['action'] === 'change_password') {
-        // Ubah Password
-        $current_password = $_POST['current_password'];
-        $new_password = $_POST['new_password'];
-        $confirm_password = $_POST['confirm_password'];
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        $error = "Token CSRF tidak valid.";
+    } else {
+        // Cek apakah ini form update profil atau ubah password
+        if (isset($_POST['action']) && $_POST['action'] === 'change_password') {
+            // Ubah Password
+            $current_password = $_POST['current_password'];
+            $new_password = $_POST['new_password'];
+            $confirm_password = $_POST['confirm_password'];
 
-        // Validasi
-        if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
-            $error = "Semua kolom password harus diisi.";
-        } elseif (strlen($new_password) < 6) {
-            $error = "Password baru minimal 6 karakter.";
-        } elseif ($new_password !== $confirm_password) {
-            $error = "Konfirmasi password tidak cocok.";
+            // Validasi
+            if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
+                $error = "Semua kolom password harus diisi.";
+            } elseif ($new_password !== $confirm_password) {
+                $error = "Konfirmasi password tidak cocok.";
+            } else {
+                $pass_valid = validate_password_strength($new_password);
+                if ($pass_valid !== true) {
+                    $error = $pass_valid;
+                } else {
+                    // Cek password lama
+                    $stmt = $conn->prepare("SELECT password FROM users WHERE id = ?");
+                    $stmt->bind_param("i", $user_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $db_user = $result->fetch_assoc();
+
+                    if (password_verify($current_password, $db_user['password'])) {
+                        // Update password
+                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                        $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+                        $update_stmt->bind_param("si", $hashed_password, $user_id);
+                        
+                        if ($update_stmt->execute()) {
+                            log_audit($conn, 'change_password', 'Password changed');
+                            $success = "Password berhasil diperbarui!";
+                        } else {
+                            $error = "Gagal memperbarui password.";
+                        }
+                    } else {
+                        $error = "Password lama salah.";
+                    }
+                }
+            }
         } else {
-            // Cek password lama
-            $stmt = $conn->prepare("SELECT password FROM users WHERE id = ?");
-            $stmt->bind_param("i", $user_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $db_user = $result->fetch_assoc();
-
-            if (password_verify($current_password, $db_user['password'])) {
-                // Update password
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-                $update_stmt->bind_param("si", $hashed_password, $user_id);
+            // Update Profil
+            $email   = sanitize($_POST['email']);
+            $contact = sanitize($_POST['contact']);
+            
+            // Validasi email
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = "Format email tidak valid.";
+            } else {
+                // Update profile
+                $update_stmt = $conn->prepare("UPDATE users SET email = ?, contact = ? WHERE id = ?");
+                $update_stmt->bind_param("ssi", $email, $contact, $user_id);
                 
                 if ($update_stmt->execute()) {
-                    $success = "Password berhasil diperbarui!";
+                    $success = "Profil berhasil diperbarui!";
                 } else {
-                    $error = "Gagal memperbarui password.";
+                    $error = "Gagal memperbarui profil.";
                 }
-            } else {
-                $error = "Password lama salah.";
-            }
-        }
-    } else {
-        // Update Profil
-        $email   = sanitize($_POST['email']);
-        $contact = sanitize($_POST['contact']);
-        
-        // Validasi email
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = "Format email tidak valid.";
-        } else {
-            // Update profile
-            $update_stmt = $conn->prepare("UPDATE users SET email = ?, contact = ? WHERE id = ?");
-            $update_stmt->bind_param("ssi", $email, $contact, $user_id);
-            
-            if ($update_stmt->execute()) {
-                $success = "Profil berhasil diperbarui!";
-            } else {
-                $error = "Gagal memperbarui profil.";
             }
         }
     }
@@ -126,20 +134,21 @@ include '../includes/header.php';
         <!-- Form Update Profil -->
         <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem; color: var(--text);">Informasi Profil</h3>
         <form action="" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="form-group">
                 <label>Username</label>
-                <input type="text" value="<?php echo $user['username']; ?>" readonly style="background: var(--surface); color: var(--text); cursor: default;">
+                <input type="text" value="<?php echo e($user['username']); ?>" readonly style="background: var(--surface); color: var(--text); cursor: default;">
                 <small style="color: var(--text-light);">Username tidak dapat diubah.</small>
             </div>
 
             <div class="form-group">
                 <label>Email</label>
-                <input type="email" name="email" value="<?php echo $user['email']; ?>" required placeholder="Masukkan email">
+                <input type="email" name="email" value="<?php echo e($user['email']); ?>" required placeholder="Masukkan email">
             </div>
 
             <div class="form-group">
                 <label>Kontak Lain (WhatsApp / No. HP / Sosmed)</label>
-                <input type="text" name="contact" value="<?php echo $user['contact']; ?>" placeholder="Contoh: WA: 08123456789 atau IG: @username">
+                <input type="text" name="contact" value="<?php echo e($user['contact']); ?>" placeholder="Contoh: WA: 08123456789 atau IG: @username">
                 <small style="color: var(--text-light);">Informasi ini akan ditampilkan di laporan yang Anda buat.</small>
             </div>
 
@@ -153,6 +162,7 @@ include '../includes/header.php';
         <hr style="border: none; border-top: 1px solid var(--border); margin: 2.5rem 0;">
         <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--text);">Ubah Password</h3>
         <form action="" method="POST">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="action" value="change_password">
             
             <div class="form-group">
@@ -162,7 +172,7 @@ include '../includes/header.php';
 
             <div class="form-group">
                 <label>Password Baru</label>
-                <input type="password" name="new_password" required placeholder="Masukkan password baru (min. 6 karakter)">
+                <input type="password" name="new_password" required placeholder="Min. 8 karakter, huruf besar, kecil, dan angka">
             </div>
 
             <div class="form-group">

@@ -33,61 +33,57 @@ $error = '';
 
 // Proses form edit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $type        = sanitize($_POST['type']);
-    $item_name   = sanitize($_POST['item_name']);
-    $category    = sanitize($_POST['category']);
-    $description = sanitize($_POST['description']);
-    $location    = sanitize($_POST['location']);
-    $latitude    = !empty($_POST['latitude']) ? $_POST['latitude'] : null;
-    $longitude   = !empty($_POST['longitude']) ? $_POST['longitude'] : null;
-    $event_date  = $_POST['event_date'];
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        $error = "Token CSRF tidak valid.";
+    } else {
+        $type        = sanitize($_POST['type']);
+        $item_name   = sanitize($_POST['item_name']);
+        $category    = sanitize($_POST['category']);
+        $description = sanitize($_POST['description']);
+        $location    = sanitize($_POST['location']);
+        $latitude    = !empty($_POST['latitude']) ? $_POST['latitude'] : null;
+        $longitude   = !empty($_POST['longitude']) ? $_POST['longitude'] : null;
+        $event_date  = $_POST['event_date'];
 
-    // Gambar: tetap pakai yang lama jika tidak ada upload baru
-    $image_url = $report['image_url'];
+        // Gambar: tetap pakai yang lama jika tidak ada upload baru
+        $image_url = $report['image_url'];
 
-    if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-
-        if (in_array($ext, $allowed)) {
-            $new_filename = uniqid('IMG_', true) . '.' . $ext;
-            $destination  = UPLOAD_DIR . $new_filename;
-
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $destination)) {
+        if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+            [$upload_ok, $upload_result] = validate_upload($_FILES['image']);
+            if ($upload_ok) {
                 // Hapus foto lama jika ada
                 if ($report['image_url'] && file_exists(UPLOAD_DIR . $report['image_url'])) {
                     unlink(UPLOAD_DIR . $report['image_url']);
                 }
-                $image_url = $new_filename;
+                $image_url = $upload_result;
             } else {
-                $error = "Gagal mengupload gambar.";
+                $error = $upload_result;
             }
-        } else {
-            $error = "Format file tidak didukung (Gunakan: JPG, PNG, WEBP).";
         }
-    }
 
-    // Hapus foto jika user centang "Hapus Foto"
-    if (isset($_POST['delete_image']) && $_POST['delete_image'] === '1') {
-        if ($report['image_url'] && file_exists(UPLOAD_DIR . $report['image_url'])) {
-            unlink(UPLOAD_DIR . $report['image_url']);
+        // Hapus foto jika user centang "Hapus Foto"
+        if (isset($_POST['delete_image']) && $_POST['delete_image'] === '1') {
+            if ($report['image_url'] && file_exists(UPLOAD_DIR . $report['image_url'])) {
+                unlink(UPLOAD_DIR . $report['image_url']);
+            }
+            $image_url = null;
         }
-        $image_url = null;
-    }
 
-    if (!$error) {
-        $stmt = $conn->prepare("
-            UPDATE reports 
-            SET type=?, item_name=?, category=?, description=?, location=?, 
-                latitude=?, longitude=?, event_date=?, image_url=?
-            WHERE id=?
-        ");
-       $stmt->bind_param('sssssssssi', $type, $item_name, $category, $description, $location, $latitude, $longitude, $event_date, $image_url, $id);
+        if (!$error) {
+            $stmt = $conn->prepare("
+                UPDATE reports 
+                SET type=?, item_name=?, category=?, description=?, location=?, 
+                    latitude=?, longitude=?, event_date=?, image_url=?
+                WHERE id=?
+            ");
+            $stmt->bind_param('sssssssssi', $type, $item_name, $category, $description, $location, $latitude, $longitude, $event_date, $image_url, $id);
 
-        if ($stmt->execute()) {
-            redirect("detail.php?id=$id", "Laporan berhasil diperbarui!", "success");
-        } else {
-            $error = "Gagal memperbarui laporan: " . $stmt->error;
+            if ($stmt->execute()) {
+                log_audit($conn, 'edit_report', "Edited report #$id: $item_name");
+                redirect("detail.php?id=$id", "Laporan berhasil diperbarui!", "success");
+            } else {
+                $error = "Gagal memperbarui laporan: " . $stmt->error;
+            }
         }
     }
 }
@@ -105,6 +101,7 @@ include '../includes/header.php';
         <?php endif; ?>
 
         <form action="" method="POST" enctype="multipart/form-data">
+            <?php echo csrf_field(); ?>
 
             <!-- Jenis Laporan -->
             <div class="form-group">
@@ -141,27 +138,25 @@ include '../includes/header.php';
             <!-- Lokasi Teks -->
             <div class="form-group">
                 <label>Lokasi Kejadian (Nama Tempat)</label>
-                <input type="text" name="location" required
+                <input type="text" name="location" id="location" required
                        value="<?php echo htmlspecialchars($report['location']); ?>"
-                       placeholder="Contoh: Kantin Gedung A">
+                       placeholder="Ketik nama tempat, misal 'Stasiun Gambir'">
+                <small style="color: var(--text-light);">Mulai ketik untuk mencari lokasi otomatis, lalu pilih saran. Atau tandai langsung di peta di bawah.</small>
             </div>
 
             <!-- Peta -->
             <div class="form-group">
                 <label>Pilih Lokasi di Peta (Opsional)</label>
-                <input type="text" id="location-search" placeholder="Cari lokasi...">
-                <ul id="location-suggestions" class="location-suggestions"></ul>
-                <div id="map-picker" style="height: 300px; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border);"></div>
+                <div id="map-picker" style="height: 300px; border-radius: var(--radius); margin-bottom: 0.5rem; border: 1px solid var(--border);"></div>
                 <input type="hidden" name="latitude"  id="lat" value="<?php echo $report['latitude']; ?>">
                 <input type="hidden" name="longitude" id="lng" value="<?php echo $report['longitude']; ?>">
-                <small style="color: var(--text-light);">Klik peta atau cari lokasi untuk memperbarui pin.</small>
             </div>
 
             <!-- Tanggal -->
             <div class="form-group">
                 <label>Tanggal Kejadian</label>
                 <input type="date" name="event_date" required
-                       value="<?php echo $report['event_date']; ?>">
+                       value="<?php echo e($report['event_date']); ?>">
             </div>
 
             <!-- Deskripsi -->
@@ -178,7 +173,7 @@ include '../includes/header.php';
                 <?php if ($report['image_url']): ?>
                 <div style="margin-bottom: 1rem;">
                     <p style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem;">Foto saat ini:</p>
-                    <img src="../uploads/<?php echo $report['image_url']; ?>"
+                    <img src="../uploads/<?php echo e($report['image_url']); ?>"
                          alt="Foto barang"
                          style="max-width: 200px; border-radius: var(--radius); border: 1px solid var(--border);">
                     <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -211,84 +206,19 @@ include '../includes/header.php';
 
 <?php include '../includes/footer.php'; ?>
 
+<script src="<?php echo BASE_URL; ?>assets/js/location-picker.js"></script>
 <script>
-    // Koordinat awal: pakai data laporan jika ada, fallback Jakarta
     var initLat = <?php echo !empty($report['latitude'])  ? $report['latitude']  : '-6.200000'; ?>;
     var initLng = <?php echo !empty($report['longitude']) ? $report['longitude'] : '106.816666'; ?>;
-    var initZoom = <?php echo !empty($report['latitude']) ? '15' : '13'; ?>;
+    var hasCoord = <?php echo (!empty($report['latitude']) && !empty($report['longitude'])) ? 'true' : 'false'; ?>;
 
-    var map = L.map('map-picker').setView([initLat, initLng], initZoom);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    map.invalidateSize();
-
-    // Tampilkan marker awal jika ada koordinat
-    var marker;
-    <?php if (!empty($report['latitude']) && !empty($report['longitude'])): ?>
-    marker = L.marker([initLat, initLng]).addTo(map);
-    <?php endif; ?>
-
-    var searchInput      = document.getElementById('location-search');
-    var suggestionList   = document.getElementById('location-suggestions');
-    var locationInput    = document.querySelector('input[name="location"]');
-
-    function debounce(func, wait) {
-        var timeout;
-        return function() {
-            clearTimeout(timeout);
-            timeout = setTimeout(function() { func.apply(this, arguments); }, wait);
-        };
-    }
-
-    function clearSuggestions() {
-        suggestionList.innerHTML = '';
-        suggestionList.style.display = 'none';
-    }
-
-    function selectLocation(result) {
-        var lat = parseFloat(result.lat);
-        var lng = parseFloat(result.lon);
-        map.setView([lat, lng], 16);
-        if (marker) { marker.setLatLng([lat, lng]); }
-        else { marker = L.marker([lat, lng]).addTo(map); }
-        document.getElementById('lat').value = lat;
-        document.getElementById('lng').value = lng;
-        if (locationInput) { locationInput.value = result.display_name; }
-        clearSuggestions();
-    }
-
-    function showSuggestions(results) {
-        suggestionList.innerHTML = '';
-        if (!results || !results.length) { clearSuggestions(); return; }
-        results.forEach(function(result) {
-            var item = document.createElement('li');
-            item.textContent = result.display_name;
-            item.addEventListener('click', function() { selectLocation(result); });
-            suggestionList.appendChild(item);
-        });
-        suggestionList.style.display = 'block';
-    }
-
-    searchInput.addEventListener('input', debounce(function(e) {
-        var q = e.target.value;
-        if (!q || q.length < 3) { clearSuggestions(); return; }
-        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=id&q=' + encodeURIComponent(q))
-            .then(function(r) { return r.json(); })
-            .then(showSuggestions)
-            .catch(clearSuggestions);
-    }, 300));
-
-    document.addEventListener('click', function(e) {
-        if (!suggestionList.contains(e.target) && e.target !== searchInput) { clearSuggestions(); }
-    });
-
-    map.on('click', function(e) {
-        if (marker) { marker.setLatLng(e.latlng); }
-        else { marker = L.marker(e.latlng).addTo(map); }
-        document.getElementById('lat').value = e.latlng.lat;
-        document.getElementById('lng').value = e.latlng.lng;
+    initLocationPicker({
+        mapElId: 'map-picker',
+        searchInputEl: document.getElementById('location'),
+        latInputId: 'lat',
+        lngInputId: 'lng',
+        defaultLat: initLat,
+        defaultLng: initLng,
+        defaultZoom: hasCoord ? 15 : 13
     });
 </script>

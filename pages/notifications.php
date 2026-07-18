@@ -17,7 +17,10 @@ $offset = ($page - 1) * $limit;
 $all_notifs = get_all_notifications($conn, $user_id, $limit, $offset);
 
 // Get total count
-$total_result = $conn->query("SELECT COUNT(*) as total FROM notifications WHERE user_id = $user_id");
+$stmt_total = $conn->prepare("SELECT COUNT(*) as total FROM notifications WHERE user_id = ?");
+$stmt_total->bind_param("i", $user_id);
+$stmt_total->execute();
+$total_result = $stmt_total->get_result();
 $total_row = $total_result->fetch_assoc();
 $total_notifs = $total_row['total'];
 $total_pages = ceil($total_notifs / $limit);
@@ -58,15 +61,15 @@ include '../includes/header.php';
                             <?php endif; ?>
                         </div>
                         <div style="color: var(--text); margin-bottom: 0.5rem; line-height: 1.6;">
-                            <?php echo $notif['message']; ?>
+                            <?php echo e_html($notif['message']); ?>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-light);">
-                            Barang: <strong><?php echo htmlspecialchars($notif['item_name']); ?></strong>
+                            Barang: <strong><?php echo e($notif['item_name']); ?></strong>
                             <span style="margin: 0 0.5rem;">•</span>
                             <?php echo time_ago($notif['created_at']); ?>
                         </div>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteNotification(<?php echo $notif['id']; ?>)" class="btn" style="background: var(--danger); color: white; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: none; cursor: pointer;">
+                    <button onclick="event.stopPropagation(); deleteNotification(<?php echo (int)$notif['id']; ?>)" class="btn" style="background: var(--danger); color: white; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: none; cursor: pointer;">
                         Hapus
                     </button>
                 </div>
@@ -113,7 +116,8 @@ include '../includes/header.php';
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    notification_id: notifId
+                    notification_id: notifId,
+                    csrf_token: csrfToken
                 })
             })
             .then(response => response.json())
@@ -129,7 +133,13 @@ include '../includes/header.php';
     function markAllAsRead() {
         if (confirm('Tandai semua notifikasi sebagai sudah dibaca?')) {
             fetch('<?php echo BASE_URL; ?>api/mark_all_read.php', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    csrf_token: csrfToken
+                })
             })
             .then(response => response.json())
             .then(data => {

@@ -68,6 +68,43 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table rate_limits
+CREATE TABLE IF NOT EXISTS rate_limits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    identifier VARCHAR(64) NOT NULL,
+    action_type VARCHAR(32) NOT NULL,
+    attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_lookup (identifier, action_type, attempted_at)
+);
+
+-- Table audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    username VARCHAR(50),
+    action VARCHAR(50) NOT NULL,
+    description TEXT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Table chat_access_logs (audit trail akses chat)
+CREATE TABLE IF NOT EXISTS chat_access_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    chat_room_id INT NOT NULL,
+    face_verification_id INT NULL,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    action ENUM('access_chat', 'send_message') DEFAULT 'access_chat',
+    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+    FOREIGN KEY (face_verification_id) REFERENCES face_verifications(id) ON DELETE SET NULL
+);
+
 -- Table notifications
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -81,7 +118,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
 );
 
--- Optional: Insert initial admin data (password: admin123)
--- Hash: $2y$10$koo8hP2FegUHE17.WejGy.dMNu.2Zz4dsm84M9Udf9cpdbUpb7Xmm
+-- Optional: Insert initial admin data (password: Admin_f746f6f1)
+-- GANTI PASSWORD INI SETELAH LOGIN PERTAMA KALI!
+-- Hash: $2y$10$sRC/z6CgNyc8MTBAK/fd/.TbbJnyuEOR5XwYg8i1qp0KNTSSLDjLO
 INSERT INTO users (username, email, password, role) VALUES 
-('admin', 'admin@lostfound.com', '$2y$10$koo8hP2FegUHE17.WejGy.dMNu.2Zz4dsm84M9Udf9cpdbUpb7Xmm', 'admin');
+('admin', 'admin@lostfound.com', '$2y$10$sRC/z6CgNyc8MTBAK/fd/.TbbJnyuEOR5XwYg8i1qp0KNTSSLDjLO', 'admin');

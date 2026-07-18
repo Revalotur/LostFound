@@ -14,6 +14,11 @@ $data = json_decode(file_get_contents('php://input'), true);
 $notification_id = $data['notification_id'] ?? null;
 $user_id = $_SESSION['user_id'];
 
+if (!isset($data['csrf_token']) || !verify_csrf($data['csrf_token'])) {
+    echo json_encode(['success' => false, 'message' => 'Token CSRF tidak valid.']);
+    exit();
+}
+
 if (!$notification_id) {
     echo json_encode(['success' => false, 'message' => 'Notification ID required']);
     exit();

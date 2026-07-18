@@ -10,7 +10,13 @@ if (!is_logged_in()) {
     exit();
 }
 
+$data = json_decode(file_get_contents('php://input'), true);
 $user_id = $_SESSION['user_id'];
+
+if (!isset($data['csrf_token']) || !verify_csrf($data['csrf_token'])) {
+    echo json_encode(['success' => false, 'message' => 'Token CSRF tidak valid.']);
+    exit();
+}
 
 $stmt = $conn->prepare("UPDATE notifications SET is_read = true WHERE user_id = ? AND is_read = false");
 $stmt->bind_param("i", $user_id);

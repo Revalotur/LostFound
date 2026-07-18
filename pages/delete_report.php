@@ -33,6 +33,7 @@ if ($id > 0) {
             $del_stmt = $conn->prepare("DELETE FROM reports WHERE id = ?");
             $del_stmt->bind_param("i", $id);
             if ($del_stmt->execute()) {
+                log_audit($conn, 'delete_report', "Deleted report #$id");
                 redirect("../index.php", "Laporan berhasil dihapus.", "success");
             }
         }

@@ -39,7 +39,7 @@ include '../includes/header.php';
 <div class="detail-container animate-fade-in">
     <div class="detail-image-card">
         <?php if ($report['image_url']): ?>
-            <img src="../uploads/<?php echo $report['image_url']; ?>" alt="<?php echo $report['item_name']; ?>" style="width: 100%; border-radius: var(--radius); display: block; box-shadow: var(--shadow-lg);">
+            <img src="../uploads/<?php echo e($report['image_url']); ?>" alt="<?php echo e($report['item_name']); ?>" style="width: 100%; border-radius: var(--radius); display: block; box-shadow: var(--shadow-lg);">
         <?php else: ?>
             <div style="width: 100%; height: 400px; background: #f1f5f9; border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; border: 2px dashed var(--border);">
                 <i data-lucide="image-off" style="width: 64px; height: 64px; margin-bottom: 1rem;"></i>
@@ -58,7 +58,7 @@ include '../includes/header.php';
             </span>
         </div>
         
-        <h1 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.025em; line-height: 1.1; color: var(--text-dark);"><?php echo $report['item_name']; ?></h1>
+        <h1 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.025em; line-height: 1.1; color: var(--text-dark);"><?php echo e($report['item_name']); ?></h1>
         
         <div class="info-grid">
             <div class="info-item">
@@ -67,7 +67,7 @@ include '../includes/header.php';
                 </div>
                 <div class="info-content">
                     <label>Lokasi Kejadian</label>
-                    <strong><?php echo $report['location']; ?></strong>
+                    <strong><?php echo e($report['location']); ?></strong>
                 </div>
             </div>
             <div class="info-item">
@@ -86,7 +86,7 @@ include '../includes/header.php';
                 <div class="info-content">
                     <label>Dilaporkan Oleh</label>
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <strong><?php echo $report['username']; ?></strong>
+                        <strong><?php echo e($report['username']); ?></strong>
                         <?php if ($report['face_verified']): ?>
                             <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
                                 <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i>
@@ -107,7 +107,11 @@ include '../includes/header.php';
                 </div>
                 <div class="info-content">
                     <label>Email Kontak</label>
-                    <a href="mailto:<?php echo $report['email']; ?>"><?php echo $report['email']; ?></a>
+                    <?php if (is_logged_in()): ?>
+                        <a href="mailto:<?php echo e($report['email']); ?>"><?php echo e($report['email']); ?></a>
+                    <?php else: ?>
+                        <span style="color: var(--text-light);">Login untuk melihat kontak</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php if (!empty($report['contact'])): ?>
@@ -117,7 +121,7 @@ include '../includes/header.php';
                 </div>
                 <div class="info-content">
                     <label>Kontak Lain</label>
-                    <strong><?php echo $report['contact']; ?></strong>
+                    <strong><?php echo e($report['contact']); ?></strong>
                 </div>
             </div>
             <?php endif; ?>
@@ -127,7 +131,7 @@ include '../includes/header.php';
                 </div>
                 <div class="info-content">
                     <label>Kategori</label>
-                    <strong><?php echo $report['category'] ?? 'Lainnya'; ?></strong>
+                    <strong><?php echo e($report['category'] ?? 'Lainnya'); ?></strong>
                 </div>
             </div>
         </div>
@@ -176,7 +180,8 @@ include '../includes/header.php';
             <div class="detail-actions">
                 <?php if ($report['status'] === 'open'): ?>
                     <form action="update_status.php" method="POST" id="form-resolved">
-                        <input type="hidden" name="id" value="<?php echo $report['id']; ?>">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="id" value="<?php echo (int)$report['id']; ?>">
                         <input type="hidden" name="status" value="resolved">
                         <button type="button" class="btn btn-success btn-block" style="background: #10b981; color: white; border: none; font-weight: 600;" onclick="confirmResolved()">
                             <i data-lucide="check-circle" style="width: 18px;"></i>
@@ -222,7 +227,7 @@ include '../includes/header.php';
                         <?php echo $match['type'] === 'lost' ? 'Hilang' : 'Ditemukan'; ?>
                     </span>
                     <?php if ($match['image_url']): ?>
-                        <img src="../uploads/<?php echo $match['image_url']; ?>" alt="<?php echo $match['item_name']; ?>">
+                        <img src="../uploads/<?php echo e($match['image_url']); ?>" alt="<?php echo e($match['item_name']); ?>">
 <?php else: ?>
     <div style="width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; color: var(--text-light);">
         <i data-lucide="image-off" style="width: 32px; height: 32px;"></i>
@@ -230,10 +235,10 @@ include '../includes/header.php';
 <?php endif; ?>
                 </div>
                 <div class="card-body" style="padding: 1.25rem;">
-                    <h4 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><?php echo $match['item_name']; ?></h4>
+                    <h4 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;"><?php echo e($match['item_name']); ?></h4>
                     <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.25rem;">
                         <i data-lucide="map-pin" style="width: 14px;"></i>
-                        <?php echo $match['location']; ?>
+                        <?php echo e($match['location']); ?>
                     </p>
                     <a href="detail.php?id=<?php echo $match['id']; ?>" class="btn btn-primary btn-block" style="padding: 0.5rem; font-size: 0.875rem;">
                         Lihat Detail
@@ -317,7 +322,7 @@ document.getElementById('chat-btn').addEventListener('click', async function() {
         const response = await fetch('<?php echo BASE_URL; ?>api/create_room.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ report_id: <?php echo $report['id']; ?> })
+            body: JSON.stringify({ report_id: <?php echo $report['id']; ?>, csrf_token: csrfToken })
         });
         
         const result = await response.json();

@@ -113,7 +113,7 @@ include '../includes/header.php';
                 </div>
 
                 <div style="margin-top: 25px;">
-                    <button id="start-btn" class="btn btn-primary btn-block" style="padding: 15px; font-size: 1.1rem;">
+                    <button id="start-btn" class="btn btn-primary btn-block" style="padding: 15px; font-size: 1.1rem;" disabled>
                         <i data-lucide="play" style="width: 20px; height: 20px;"></i>
                         Mulai Verifikasi
                     </button>
@@ -186,8 +186,53 @@ include '../includes/header.php';
     let isVerifying = false;
     let currentStep = 1;
     let challengeCompleted = [];
-    let captureInterval = null;
-    let lastFaceData = null;
+    let stepFrames = {}; // menyimpan data deteksi per step
+    
+    let faceLandmarker = null;
+    let faceLandmarkerReady = false;
+    
+    const LEFT_EYE = [33, 159, 158, 133, 153, 144];
+    const RIGHT_EYE = [362, 385, 387, 263, 373, 380];
+    
+    function computeEAR(landmarks) {
+        const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+        const l = LEFT_EYE.map(i => landmarks[i]);
+        const r = RIGHT_EYE.map(i => landmarks[i]);
+        const earL = (d(l[1], l[5]) + d(l[2], l[4])) / (2 * d(l[0], l[3]));
+        const earR = (d(r[1], r[5]) + d(r[2], r[4])) / (2 * d(r[0], r[3]));
+        return (earL + earR) / 2;
+    }
+    
+    async function initFaceLandmarker() {
+        const MP_BASE = '<?php echo BASE_URL; ?>assets/mediapipe/';
+        try {
+            updateStatus('Memuat model deteksi wajah (lokal), harap tunggu...', 'info');
+            const { FilesetResolver, FaceLandmarker } = await import(MP_BASE + 'vision_bundle.mjs');
+            const vision = await FilesetResolver.forVisionTasks(MP_BASE + 'wasm/');
+            faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: MP_BASE + 'face_landmarker.task',
+                    delegate: 'CPU'
+                },
+                runningMode: 'IMAGE',
+                numFaces: 1
+            });
+            faceLandmarkerReady = true;
+            console.log('MediaPipe FaceLandmarker ready');
+            document.getElementById('start-btn').disabled = false;
+            if (stream) {
+                updateStatus('Webcam aktif! Tekan "Mulai Verifikasi" untuk memulai', 'info');
+            } else {
+                updateStatus('Model siap. Izinkan akses webcam untuk memulai.', 'info');
+            }
+        } catch (err) {
+            console.error('FaceLandmarker init failed:', err);
+            faceLandmarkerReady = false;
+            updateStatus('Gagal memuat model deteksi dari server lokal. Klik untuk coba lagi.', 'error');
+            const sm = document.getElementById('status-message');
+            if (sm) sm.style.cursor = 'pointer';
+        }
+    }
     
     const challenges = [
         { id: 1, name: 'Hadap Lurus', instruction: 'Posisikan wajah Anda menghadap kamera' },
@@ -208,7 +253,7 @@ include '../includes/header.php';
             video.srcObject = stream;
             canvas.width = 640;
             canvas.height = 480;
-            updateStatus('Webcam aktif! Tekan "Mulai Verifikasi" untuk memulai', 'info');
+            updateStatus('Memuat model deteksi wajah, harap tunggu...', 'info');
         } catch (err) {
             updateStatus('Gagal mengakses webcam: ' + err.message, 'error');
             console.error(err);
@@ -245,7 +290,6 @@ include '../includes/header.php';
             lucide.createIcons();
         }
         
-        // Update opacity untuk step berikutnya
         document.querySelectorAll('.challenge-step').forEach(el => {
             const elStep = parseInt(el.dataset.step);
             if (elStep > step && status === 'active') {
@@ -266,10 +310,10 @@ include '../includes/header.php';
 
     async function detectFace(imageData) {
         try {
-            const response = await fetch('<?php echo BASE_URL; ?>api/register_face.php', {
+            const response = await fetch('<?php echo BASE_URL; ?>api/detect_face_proxy.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'detect', image: imageData })
+                body: JSON.stringify({ image: imageData, csrf_token: csrfToken })
             });
             return await response.json();
         } catch (err) {
@@ -278,44 +322,168 @@ include '../includes/header.php';
         }
     }
 
-    function simulateChallengeComplete() {
-        // Simulasi sederhana untuk challenge (tanpa analisis landmark yang kompleks)
-        // Di production, ini akan menganalisis pergerakan landmark wajah
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve(true);
-            }, 2000);
-        });
+    function getFaceCenter(faceData) {
+        if (!faceData || !faceData.bbox) return null;
+        const bbox = faceData.bbox;
+        return {
+            cx: (bbox[0] + bbox[2]) / 2,
+            cy: (bbox[1] + bbox[3]) / 2,
+            width: bbox[2] - bbox[0],
+            height: bbox[3] - bbox[1]
+        };
+    }
+
+    function distance(a, b) {
+        return Math.sqrt((a.cx - b.cx) ** 2 + (a.cy - b.cy) ** 2);
+    }
+
+    async function detectBlink() {
+        updateStatus('Kedipkan mata Anda beberapa kali...', 'info');
+        const earValues = [];
+        for (let i = 0; i < 12; i++) {
+            captureFrame();
+            try {
+                const result = faceLandmarker.detect(canvas);
+                if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+                    earValues.push(computeEAR(result.faceLandmarks[0]));
+                } else {
+                    earValues.push(null);
+                }
+            } catch {
+                earValues.push(null);
+            }
+            await new Promise(r => setTimeout(r, 60));
+        }
+        const valid = earValues.filter(v => v !== null);
+        if (valid.length < 3) {
+            return { success: true, blink_detected: false, ear_values: earValues, face_detected: valid.length > 0 };
+        }
+        const baseline = valid.slice(0, 5).reduce((a, b) => a + b, 0) / Math.min(5, valid.length);
+        let blinkDetected = false;
+        for (const ear of valid) {
+            if (ear < 0.20 || (baseline > 0.2 && ear < baseline * 0.55)) {
+                blinkDetected = true;
+                break;
+            }
+        }
+        return { success: true, blink_detected: blinkDetected, ear_values: earValues, face_detected: true };
     }
 
     async function runVerification() {
         isVerifying = true;
         currentStep = 1;
         challengeCompleted = [];
+        stepFrames = {};
         
+        if (!faceLandmarkerReady) {
+            updateStatus('Model deteksi wajah belum siap. Tunggu beberapa saat atau klik pesan ini untuk coba lagi.', 'error');
+            stopVerification();
+            return;
+        }
         document.getElementById('start-btn').style.display = 'none';
         document.getElementById('stop-btn').style.display = 'block';
         document.getElementById('scan-overlay').style.display = 'flex';
         
-        for (let i = 1; i <= 4; i++) {
-            if (!isVerifying) break;
-            
-            currentStep = i;
-            updateStep(i, 'active');
-            updateStatus(challenges[i-1].instruction, 'info');
-            
-            // Simulasi challenge
-            const completed = await simulateChallengeComplete();
-            
-            if (completed) {
-                challengeCompleted.push(i);
-                updateStep(i, 'completed');
-                updateStatus(challenges[i-1].name + ' selesai!', 'success');
+        // Step 1: Hadap Lurus — deteksi wajah saja
+        if (isVerifying) {
+            updateStep(1, 'active');
+            updateStatus(challenges[0].instruction, 'info');
+            await new Promise(r => setTimeout(r, 1000));
+            const img = captureFrame();
+            const result = await detectFace(img);
+            if (result.success && result.face_detected && result.data) {
+                stepFrames[1] = getFaceCenter(result.data);
+                challengeCompleted.push(1);
+                updateStep(1, 'completed');
+                updateStatus('Wajah terdeteksi!', 'success');
+            } else {
+                stopVerification();
+                updateStatus('Wajah tidak terdeteksi. Pastikan wajah Anda terlihat jelas.', 'error');
+            }
+        }
+
+        // Step 2: Kedip — deteksi perubahan frame
+        if (isVerifying && challengeCompleted.length === 1) {
+            updateStep(2, 'active');
+            let blinkSuccess = false;
+            let blinkAttempts = 0;
+            const maxBlinkAttempts = 3;
+            while (!blinkSuccess && blinkAttempts < maxBlinkAttempts && isVerifying) {
+                blinkAttempts++;
+                updateStatus(`Kedipkan mata Anda beberapa kali (percobaan ${blinkAttempts}/${maxBlinkAttempts})...`, 'info');
+                const result = await detectBlink();
+                if (result.success && result.blink_detected) {
+                    blinkSuccess = true;
+                } else {
+                    const earText = result.ear_values ? result.ear_values.filter(v => v !== null).map(v => v.toFixed(2)).join(', ') : 'N/A';
+                    console.log('EAR values:', earText);
+                    if (blinkAttempts < maxBlinkAttempts) {
+                        updateStatus(`Kedipan belum terdeteksi (EAR: ${earText}). Coba lagi...`, 'info');
+                        await new Promise(r => setTimeout(r, 800));
+                    }
+                }
+            }
+            if (blinkSuccess) {
+                challengeCompleted.push(2);
+                updateStep(2, 'completed');
+                updateStatus('Kedipan terdeteksi!', 'success');
+                await new Promise(r => setTimeout(r, 500));
+            } else {
+                stopVerification();
+                updateStatus('Kedipan tidak terdeteksi setelah beberapa percobaan. Pastikan mata Anda terlihat dan kedipkan secara alami.', 'error');
+            }
+        }
+
+        // Step 3: Hadap Kiri
+        if (isVerifying && challengeCompleted.length === 2) {
+            updateStep(3, 'active');
+            updateStatus(challenges[2].instruction, 'info');
+            await new Promise(r => setTimeout(r, 1500));
+            const img = captureFrame();
+            const result = await detectFace(img);
+            if (result.success && result.face_detected && result.data) {
+                stepFrames[3] = getFaceCenter(result.data);
+                // Cek pergerakan ke kiri: face center x harus lebih kecil dari step 1
+                if (stepFrames[1] && stepFrames[3].cx < stepFrames[1].cx - 10) {
+                    challengeCompleted.push(3);
+                    updateStep(3, 'completed');
+                    updateStatus('Hadap kiri terdeteksi!', 'success');
+                } else {
+                    stopVerification();
+                    updateStatus('Posisi wajah tidak berubah. Putar wajah ke kiri Anda.', 'error');
+                }
+            } else {
+                stopVerification();
+                updateStatus('Wajah tidak terdeteksi. Pastikan wajah Anda terlihat.', 'error');
+            }
+        }
+
+        // Step 4: Hadap Kanan
+        if (isVerifying && challengeCompleted.length === 3) {
+            updateStep(4, 'active');
+            updateStatus(challenges[3].instruction, 'info');
+            await new Promise(r => setTimeout(r, 1500));
+            const img = captureFrame();
+            const result = await detectFace(img);
+            if (result.success && result.face_detected && result.data) {
+                stepFrames[4] = getFaceCenter(result.data);
+                // Cek pergerakan ke kanan: face center x harus lebih besar dari step 1
+                if (stepFrames[1] && stepFrames[4].cx > stepFrames[1].cx + 10) {
+                    challengeCompleted.push(4);
+                    updateStep(4, 'completed');
+                    updateStatus('Hadap kanan terdeteksi!', 'success');
+                } else {
+                    stopVerification();
+                    updateStatus('Posisi wajah tidak berubah. Putar wajah ke kanan Anda.', 'error');
+                }
+            } else {
+                stopVerification();
+                updateStatus('Wajah tidak terdeteksi. Pastikan wajah Anda terlihat.', 'error');
             }
         }
         
         if (isVerifying && challengeCompleted.length === 4) {
-            // Capture final image dan register
+            document.getElementById('scan-overlay').style.display = 'none';
             updateStatus('Menyimpan data wajah...', 'info');
             
             const imageData = captureFrame();
@@ -324,7 +492,7 @@ include '../includes/header.php';
                 const response = await fetch('<?php echo BASE_URL; ?>api/register_face.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: imageData })
+                    body: JSON.stringify({ image: imageData, csrf_token: csrfToken })
                 });
                 
                 const result = await response.json();
@@ -347,11 +515,6 @@ include '../includes/header.php';
         document.getElementById('scan-overlay').style.display = 'none';
         document.getElementById('start-btn').style.display = 'block';
         document.getElementById('stop-btn').style.display = 'none';
-        
-        if (captureInterval) {
-            clearInterval(captureInterval);
-            captureInterval = null;
-        }
     }
 
     function showResult(success, title, message) {
@@ -385,15 +548,21 @@ include '../includes/header.php';
     document.getElementById('stop-btn').addEventListener('click', () => {
         stopVerification();
         updateStatus('Verifikasi dihentikan', 'info');
-        // Reset steps
         for (let i = 1; i <= 4; i++) {
             updateStep(i, '');
         }
         updateStep(1, 'active');
     });
+    // Klik pesan status untuk mengulang inisialisasi model jika gagal
+    document.getElementById('status-message').addEventListener('click', () => {
+        if (!faceLandmarkerReady) {
+            initFaceLandmarker();
+        }
+    });
 
     // Initialize
     startWebcam();
+    initFaceLandmarker();
 </script>
 
 <?php include '../includes/footer.php'; ?>

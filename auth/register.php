@@ -12,29 +12,38 @@ if (is_logged_in()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = sanitize($_POST['username']);
-    $email    = sanitize($_POST['email']);
-    $password = $_POST['password'];
-    $confirm  = $_POST['confirm_password'];
-
-    if ($password !== $confirm) {
-        $error = "Password tidak cocok!";
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        $error = "Token CSRF tidak valid.";
     } else {
-        // Cek apakah username/email sudah ada
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-        $stmt->bind_param("ss", $username, $email);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            $error = "Username atau Email sudah terdaftar!";
+        $username = sanitize($_POST['username']);
+        $email    = sanitize($_POST['email']);
+        $password = $_POST['password'];
+        $confirm  = $_POST['confirm_password'];
+
+        if ($password !== $confirm) {
+            $error = "Password tidak cocok!";
         } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-            $stmt->bind_param("sss", $username, $email, $hashed_password);
-            
-            if ($stmt->execute()) {
-                redirect("login.php", "Registrasi berhasil! Silakan login.", "success");
+            $pass_valid = validate_password_strength($password);
+            if ($pass_valid !== true) {
+                $error = $pass_valid;
             } else {
-                $error = "Terjadi kesalahan saat registrasi.";
+                $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+                $stmt->bind_param("ss", $username, $email);
+                $stmt->execute();
+                if ($stmt->get_result()->num_rows > 0) {
+                    $error = "Username atau Email sudah terdaftar!";
+                } else {
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+                    $stmt->bind_param("sss", $username, $email, $hashed_password);
+                    
+                    if ($stmt->execute()) {
+                        log_audit($conn, 'register', "User registered: $username");
+                        redirect("login.php", "Registrasi berhasil! Silakan login.", "success");
+                    } else {
+                        $error = "Terjadi kesalahan saat registrasi.";
+                    }
+                }
             }
         }
     }
@@ -73,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form action="" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="form-group">
                 <label>Username</label>
                 <div style="position: relative;">
@@ -91,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Password</label>
                 <div style="position: relative;">
                     <i data-lucide="lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); width: 18px; color: var(--text-light);"></i>
-                    <input type="password" name="password" required placeholder="Masukkan password" style="padding-left: 3rem;">
+                    <input type="password" name="password" required placeholder="Password minimal 8 karakter, huruf besar, kecil, dan angka" style="padding-left: 3rem;">
                 </div>
             </div>
             <div class="form-group">

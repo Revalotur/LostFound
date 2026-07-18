@@ -2,14 +2,95 @@
 // includes/functions.php
 
 // Konfigurasi Flask Face Service
-define('FLASK_API_URL', 'http://localhost:5000');
+define('FLASK_API_URL', 'http://127.0.0.1:5000');
+define('FLASK_API_KEY', 'lostfound-internal-key-ganti');
 define('DEVELOPMENT_MODE', false); // Ubah ke false untuk production
+define('FLASK_API_TIMEOUT', 60);   // detik, cukup untuk load model pertama kali
 
 /**
  * Membersihkan input dari karakter berbahaya
  */
 function sanitize($data) {
     return htmlspecialchars(stripslashes(trim($data)));
+}
+
+/**
+ * Escape output untuk HTML (shortcut)
+ */
+function e($str) {
+    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Validasi kekuatan password: min 8 karakter, huruf besar, huruf kecil, angka
+ * Return true jika valid, string error jika tidak
+ */
+function validate_password_strength($password) {
+    if (strlen($password) < 8) {
+        return 'Password minimal 8 karakter.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Password harus mengandung huruf besar.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Password harus mengandung huruf kecil.';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'Password harus mengandung angka.';
+    }
+    return true;
+}
+
+/**
+ * Escape output untuk HTML, dengan allowance tag <strong>
+ */
+function e_html($str) {
+    return strip_tags($str ?? '', '<strong>');
+}
+
+/**
+ * Validasi file upload — MIME type, ekstensi, dan ukuran
+ * Return: [true, $new_filename] atau [false, $error_message]
+ */
+function validate_upload($file, $max_size = 2097152) {
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'webp'];
+    $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+    $filename = $file['name'];
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return [false, 'Gagal mengupload file.'];
+    }
+
+    if ($file['size'] < 1) {
+        return [false, 'File kosong.'];
+    }
+
+    if ($file['size'] > $max_size) {
+        return [false, 'Ukuran file maksimal ' . ($max_size / 1048576) . 'MB.'];
+    }
+
+    if (!in_array($ext, $allowed_exts)) {
+        return [false, 'Format file tidak didukung (Gunakan: JPG, PNG, WEBP).'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+
+    if (!in_array($mime, $allowed_mimes)) {
+        return [false, 'Tipe file tidak valid. Hanya gambar yang diperbolehkan.'];
+    }
+
+    $new_filename = uniqid('IMG_', true) . '.' . $ext;
+    $destination = UPLOAD_DIR . $new_filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        return [false, 'Gagal menyimpan file.'];
+    }
+
+    return [true, $new_filename];
 }
 
 /**
@@ -45,6 +126,44 @@ function is_face_verified($conn, $user_id = null) {
 }
 
 /**
+ * Cek apakah layanan Flask face recognition berjalan & model siap.
+ * Mengembalikan array ['up' => bool, 'model_status' => string, 'message' => string]
+ */
+function flask_service_status() {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, FLASK_API_URL . '/health');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error || $http_code != 200) {
+        return [
+            'up' => false,
+            'model_status' => 'down',
+            'message' => 'Layanan face recognition tidak berjalan. Jalankan face_service/start_service.bat terlebih dahulu.'
+        ];
+    }
+
+    $result = json_decode($response, true);
+    $model_status = $result['model_status'] ?? 'unknown';
+    if ($model_status !== 'loaded') {
+        return [
+            'up' => true,
+            'model_status' => $model_status,
+            'message' => 'Layanan berjalan tetapi model wajah gagal di-load: ' . ($result['model_error'] ?? 'unknown error')
+        ];
+    }
+
+    return ['up' => true, 'model_status' => 'loaded', 'message' => 'ok'];
+}
+
+/**
  * Kirim request ke Flask Face API
  */
 function call_flask_api($endpoint, $data = [], $method = 'POST') {
@@ -60,9 +179,11 @@ function call_flask_api($endpoint, $data = [], $method = 'POST') {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $json_data);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Content-Type: application/json',
-        'Content-Length: ' . strlen($json_data)
+        'Content-Length: ' . strlen($json_data),
+        'X-API-Key: ' . FLASK_API_KEY
     ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, FLASK_API_TIMEOUT);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     
     $response = curl_exec($ch);
@@ -116,6 +237,14 @@ function register_face($conn, $user_id, $image_base64) {
         ];
     }
     
+    $status = flask_service_status();
+    if (!$status['up'] || $status['model_status'] !== 'loaded') {
+        return [
+            'success' => false,
+            'message' => $status['message']
+        ];
+    }
+
     $response = call_flask_api('/register-face', [
         'user_id' => $user_id,
         'image' => $image_base64
@@ -130,9 +259,15 @@ function register_face($conn, $user_id, $image_base64) {
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     
-    // Catat di face_verifications
-    $stmt = $conn->prepare("INSERT INTO face_verifications (user_id, verified_at) VALUES (?, NOW())");
-    $stmt->bind_param("i", $user_id);
+    // Ambil embedding dari response Flask (jika ada)
+    $embedding_json = null;
+    if (isset($response['data']['embedding'])) {
+        $embedding_json = json_encode($response['data']['embedding']);
+    }
+    
+    // Catat di face_verifications beserta embedding
+    $stmt = $conn->prepare("INSERT INTO face_verifications (user_id, face_embedding, verified_at) VALUES (?, ?, NOW())");
+    $stmt->bind_param("is", $user_id, $embedding_json);
     $stmt->execute();
     
     return [
@@ -158,6 +293,39 @@ function detect_face($image_base64) {
     return call_flask_api('/detect-face', [
         'image' => $image_base64
     ]);
+}
+
+function detect_blink($images) {
+    return call_flask_api('/detect-blink', [
+        'images' => $images
+    ]);
+}
+
+/**
+ * Generate CSRF token dan simpan di session
+ */
+function csrf_token() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Generate hidden input field untuk CSRF
+ */
+function csrf_field() {
+    return '<input type="hidden" name="csrf_token" value="' . csrf_token() . '">';
+}
+
+/**
+ * Validasi CSRF token dari request
+ */
+function verify_csrf($token) {
+    if (empty($_SESSION['csrf_token']) || empty($token)) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
 }
 
 /**
@@ -219,6 +387,10 @@ function send_email_notification($to, $subject, $message) {
     $body .= '</div>';
     $body .= '</body></html>';
 
+    // TODO: Ganti dengan PHPMailer untuk production (SMTP):
+    // require_once __DIR__ . '/../vendor/autoload.php';
+    // $mail = new PHPMailer\PHPMailer\PHPMailer();
+    // $mail->isSMTP(); $mail->Host = 'smtp.example.com'; ...
     $success = mail($to, $subject, $body, $headers);
     if (!$success) {
         error_log("send_email_notification gagal mengirim ke {$to}");
@@ -421,7 +593,10 @@ function get_all_notifications($conn, $user_id, $limit = 20, $offset = 0) {
  * Count notifikasi belum dibaca
  */
 function count_unread_notifications($conn, $user_id) {
-    $result = $conn->query("SELECT COUNT(*) as total FROM notifications WHERE user_id = $user_id AND is_read = false");
+    $stmt = $conn->prepare("SELECT COUNT(*) as total FROM notifications WHERE user_id = ? AND is_read = false");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     return $row['total'];
 }
@@ -465,6 +640,74 @@ function notify_matching_users_on_new_report_db($conn, $new_report_id, $item_nam
             create_notification($conn, $creator_id, $match['id'], $message_to_creator, 'match');
         }
     }
+}
+
+/**
+ * Cek rate limit untuk sebuah aksi
+ * @param int $max_attempts Maksimum percobaan dalam jendela waktu
+ * @param int $window_minutes Jendela waktu dalam menit
+ * @return bool true jika diizinkan, false jika kena limit
+ */
+function check_rate_limit($conn, $action_type, $max_attempts = 5, $window_minutes = 15) {
+    $identifier = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $cutoff = date('Y-m-d H:i:s', time() - ($window_minutes * 60));
+
+    // Hapus data lama
+    $stmt = $conn->prepare("DELETE FROM rate_limits WHERE attempted_at < ?");
+    $stmt->bind_param("s", $cutoff);
+    $stmt->execute();
+
+    // Hitung percobaan dalam jendela
+    $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM rate_limits WHERE identifier = ? AND action_type = ? AND attempted_at > ?");
+    $stmt->bind_param("sss", $identifier, $action_type, $cutoff);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+
+    if ($row['cnt'] >= $max_attempts) {
+        return false;
+    }
+
+    // Catat percobaan
+    $stmt = $conn->prepare("INSERT INTO rate_limits (identifier, action_type) VALUES (?, ?)");
+    $stmt->bind_param("ss", $identifier, $action_type);
+    $stmt->execute();
+
+    return true;
+}
+
+/**
+ * Catat aksi ke tabel audit_logs
+ */
+function log_audit($conn, $action, $description = null, $user_id = null) {
+    if ($user_id === null && isset($_SESSION['user_id'])) {
+        $user_id = $_SESSION['user_id'];
+    }
+    $username = $_SESSION['username'] ?? null;
+    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+    $stmt = $conn->prepare("INSERT INTO audit_logs (user_id, username, action, description, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("isssss", $user_id, $username, $action, $description, $ip, $ua);
+    return $stmt->execute();
+}
+
+/**
+ * Catat akses chat ke tabel chat_access_logs
+ */
+function log_chat_access($conn, $user_id, $chat_room_id, $action = 'access_chat') {
+    // Ambil face_verification_id terakhir user ini
+    $stmt = $conn->prepare("SELECT id FROM face_verifications WHERE user_id = ? ORDER BY verified_at DESC LIMIT 1");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $fv = $stmt->get_result()->fetch_assoc();
+    $face_verification_id = $fv ? (int)$fv['id'] : null;
+
+    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+    $stmt = $conn->prepare("INSERT INTO chat_access_logs (user_id, chat_room_id, face_verification_id, ip_address, user_agent, action) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("iiisss", $user_id, $chat_room_id, $face_verification_id, $ip, $ua, $action);
+    return $stmt->execute();
 }
 
 /**
