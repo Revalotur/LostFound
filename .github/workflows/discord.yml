@@ -2,15 +2,16 @@ name: Discord Notification
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
+    types: [opened, closed]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Discord Notification
+      - name: Push Notification
+        if: github.event_name == 'push'
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -33,6 +34,39 @@ jobs:
                 {name:"👤 Author",value:$author,inline:true},
                 {name:"🧑‍💻 Committer",value:$committer,inline:true},
                 {name:"📤 Pushed by",value:$pushed,inline:true},
+                {name:"🌿 Branch",value:$branch,inline:true}],
+              timestamp:$time}]}' | \
+            curl -H "Content-Type: application/json" -d @- "$WEBHOOK"
+
+      - name: Pull Request Notification
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          FIRST_LINE=$(echo "$PR_TITLE" | head -n 1)
+          if [ "$MERGED" = "true" ]; then
+            STATUS="✅ Merged"
+            COLOR=3066993
+          else
+            STATUS="❌ Closed"
+            COLOR=15158332
+          fi
+          jq -n \
+            --arg title "$STATUS PR di ${{ github.repository }}" \
+            --arg url "${{ github.event.pull_request.html_url }}" \
+            --arg msg "$FIRST_LINE" \
+            --arg author "${{ github.event.pull_request.user.login }}" \
+            --arg branch "${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}" \
+            --arg avatar "https://github.com/${{ github.event.pull_request.user.login }}.png" \
+            --arg time "${{ github.event.pull_request.updated_at }}" \
+            --argjson color $COLOR \
+            '{embeds:[{title:$title,url:$url,color:$color,
+              thumbnail:{url:$avatar},
+              fields:[
+                {name:"📝 Judul PR",value:$msg,inline:false},
+                {name:"👤 Author",value:$author,inline:true},
                 {name:"🌿 Branch",value:$branch,inline:true}],
               timestamp:$time}]}' | \
             curl -H "Content-Type: application/json" -d @- "$WEBHOOK"
