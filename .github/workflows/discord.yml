@@ -24,12 +24,15 @@ jobs:
             --arg committer "${{ github.event.head_commit.committer.name }}" \
             --arg pushed "${{ github.actor }}" \
             --arg branch "${{ github.ref_name }}" \
+            --arg avatar "${{ github.event.head_commit.author.avatar_url }}" \
             --arg time "${{ github.event.head_commit.timestamp }}" \
-            '{embeds:[{title:$title,url:$url,color:5763719,fields:[
-              {name:"📝 Pesan Commit",value:$msg,inline:false},
-              {name:"👤 Author",value:$author,inline:true},
-              {name:"🧑‍💻 Committer",value:$committer,inline:true},
-              {name:"📤 Pushed by",value:$pushed,inline:true},
-              {name:"🌿 Branch",value:$branch,inline:true}],
+            '{embeds:[{title:$title,url:$url,color:5763719,
+              thumbnail:{url:$avatar},
+              fields:[
+                {name:"📝 Pesan Commit",value:$msg,inline:false},
+                {name:"👤 Author",value:$author,inline:true},
+                {name:"🧑‍💻 Committer",value:$committer,inline:true},
+                {name:"📤 Pushed by",value:$pushed,inline:true},
+                {name:"🌿 Branch",value:$branch,inline:true}],
               timestamp:$time}]}' | \
             curl -H "Content-Type: application/json" -d @- "$WEBHOOK"
