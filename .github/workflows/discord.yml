@@ -11,23 +11,25 @@ jobs:
 
     steps:
       - name: Send Discord Notification
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          curl -H "Content-Type: application/json" \
-          -X POST \
-          -d "{
-            \"embeds\":[{
-              \"title\":\"🚀 New Push di ${{ github.repository }}\",
-              \"url\":\"https://github.com/${{ github.repository }}/commit/${{ github.sha }}\",
-              \"color\":5763719,
-              \"description\":\"${{ github.event.head_commit.message }}\",
-              \"fields\":[
-                {\"name\":\"👤 Author\",\"value\":\"${{ github.event.head_commit.author.username }}\",\"inline\":true},
-                {\"name\":\"🧑‍💻 Committer\",\"value\":\"${{ github.event.head_commit.committer.name }}\",\"inline\":true},
-                {\"name\":\"📤 Pushed by\",\"value\":\"${{ github.actor }}\",\"inline\":true},
-                {\"name\":\"🌿 Branch\",\"value\":\"${{ github.ref_name }}\",\"inline\":true},
-                {\"name\":\"🔢 Commit\",\"value\":\"\`${{ github.sha }}\",\"inline\":false}
-              ],
-              \"timestamp\":\"${{ github.event.head_commit.timestamp }}\"
-            }]
-          }" \
-          ${{ secrets.DISCORD_WEBHOOK }}
+          FIRST_LINE=$(echo "$MESSAGE" | head -n 1)
+          jq -n \
+            --arg title "🚀 New Push di ${{ github.repository }}" \
+            --arg url "https://github.com/${{ github.repository }}/commit/${{ github.sha }}" \
+            --arg msg "$FIRST_LINE" \
+            --arg author "${{ github.event.head_commit.author.username }}" \
+            --arg committer "${{ github.event.head_commit.committer.name }}" \
+            --arg pushed "${{ github.actor }}" \
+            --arg branch "${{ github.ref_name }}" \
+            --arg time "${{ github.event.head_commit.timestamp }}" \
+            '{embeds:[{title:$title,url:$url,color:5763719,fields:[
+              {name:"📝 Pesan Commit",value:$msg,inline:false},
+              {name:"👤 Author",value:$author,inline:true},
+              {name:"🧑‍💻 Committer",value:$committer,inline:true},
+              {name:"📤 Pushed by",value:$pushed,inline:true},
+              {name:"🌿 Branch",value:$branch,inline:true}],
+              timestamp:$time}]}' | \
+            curl -H "Content-Type: application/json" -d @- "$WEBHOOK"
