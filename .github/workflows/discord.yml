@@ -24,7 +24,7 @@ jobs:
             --arg committer "${{ github.event.head_commit.committer.name }}" \
             --arg pushed "${{ github.actor }}" \
             --arg branch "${{ github.ref_name }}" \
-            --arg avatar "${{ github.event.head_commit.author.avatar_url }}" \
+            --arg avatar "https://github.com/${{ github.event.head_commit.author.username }}.png" \
             --arg time "${{ github.event.head_commit.timestamp }}" \
             '{embeds:[{title:$title,url:$url,color:5763719,
               thumbnail:{url:$avatar},
